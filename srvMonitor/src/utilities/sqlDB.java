@@ -5,7 +5,6 @@
  */
 package utilities;
 import java.sql.*;
-import java.sql.ResultSet;
 
 /**
  *
@@ -215,6 +214,31 @@ public class sqlDB {
     correctamente, por lo tanto, sólo en ese caso retornaremos null.
     
     */
+    
+    public boolean isExistRowKey(String vSql) {
+    	boolean isExist = false;
+        ResultSet resultado;
+        
+        try {
+            Statement sentencia;
+            sentencia = getConexion().createStatement(ResultSet.CONCUR_READ_ONLY, ResultSet.CONCUR_READ_ONLY);
+            resultado = sentencia.executeQuery(vSql);
+            if (resultado!=null) {
+            	if (resultado.next()) {
+            		isExist = true;
+            	} else {
+            		isExist = false;
+            	}
+            } else {
+            	isExist = false;
+            }
+            return isExist;
+        } catch (SQLException e) {
+            connErrMesg = e.getMessage();
+            vSQLError = e.getMessage();
+            return false;
+        }
+    }
     
     public ResultSet consultar(String sql) {
         ResultSet resultado;

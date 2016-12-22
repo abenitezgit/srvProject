@@ -175,7 +175,7 @@ public class oracleDB {
     cadena que contendrá la consulta SQL a ejecutar
     */
         
-    public boolean execute(String sql) {
+    public int execute(String sql) {
        try {
             Statement sentencia;
             sentencia = getConexion().createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
@@ -183,12 +183,12 @@ public class oracleDB {
             // En NumFilas se retorna el numero de filas afectadas
             getConexion().commit();
             sentencia.close();
+            return FilasAfectadas;
         } catch (SQLException e) {
             connErrMesg = "Error en Ejecucion de Sentencia";
             vSQLError = e.getMessage();
-            return false;
+            return 0;
         }        
-        return true;
     }
     
     public boolean executeSP(String sql) {

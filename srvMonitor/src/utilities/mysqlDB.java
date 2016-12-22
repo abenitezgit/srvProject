@@ -168,21 +168,48 @@ public class mysqlDB {
     true si se ejecuta la consulta correctamente, false si no. A su vez recibirá una 
     cadena que contendrá la consulta SQL a ejecutar
     */
+    
+    public boolean isExistRowKey(String vSql) {
+    	boolean isExist = false;
+        ResultSet resultado;
         
-    public boolean execute(String sql) {
+        try {
+            Statement sentencia;
+            sentencia = getConexion().createStatement(ResultSet.CONCUR_READ_ONLY, ResultSet.CONCUR_READ_ONLY);
+            resultado = sentencia.executeQuery(vSql);
+            if (resultado!=null) {
+            	if (resultado.next()) {
+            		isExist = true;
+            	} else {
+            		isExist = false;
+            	}
+            } else {
+            	isExist = false;
+            }
+            return isExist;
+        } catch (SQLException e) {
+            connErrMesg = e.getMessage();
+            vSQLError = e.getMessage();
+            return false;
+        }
+
+    	
+    	
+    }
+        
+    public int execute(String sql) {
        try {
             Statement sentencia;
             sentencia = getConexion().createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
             FilasAfectadas = sentencia.executeUpdate(sql);
             // En NumFilas se retorna el numero de filas afectadas
-            getConexion().commit();
             sentencia.close();
+            return FilasAfectadas;
         } catch (SQLException e) {
             connErrMesg = "Error en Ejecucion de Sentencia";
             vSQLError = e.getMessage();
-            return false;
+            return 0;
         }        
-        return true;
     }
     
     public boolean executeSP(String sql) {

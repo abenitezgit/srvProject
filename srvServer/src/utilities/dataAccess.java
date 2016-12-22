@@ -5,6 +5,7 @@
  */
 package utilities;
 
+import java.sql.Connection;
 import java.sql.ResultSet;
 import org.apache.log4j.Logger;
 import utilities.globalAreaData;
@@ -53,7 +54,7 @@ public class dataAccess {
                     //gDatos.getServerStatus().setIsValMetadataConnect(false);
                 }
                 break;
-            case "mySQL":
+            case "MYSQL":
                 try {
                     myConn = new mysqlDB(dbHost, dbName, String.valueOf(dbPort), dbUser, dbPass);
                     myConn.conectar();
@@ -69,6 +70,17 @@ public class dataAccess {
                 }
                 break;
             case "SQL":
+            	try {
+        			sqlConn = new sqlDB(dbHost, dbName, dbPort, dbUser, dbPass);
+        			sqlConn.conectar();
+        			if (sqlConn.getConnStatus()) {
+        				
+        			} else {
+        				
+        			}
+            	} catch (Exception e) {
+                    logger.error("Error de conexion a MetaData: "+e.getMessage());
+            	}
                 break;
             case "HBASE":
                 break;
@@ -87,7 +99,7 @@ public class dataAccess {
                 case "SQL":
                     connected = sqlConn.getConnStatus();
                     break;
-                case "mySQL":
+                case "MYSQL":
                     connected = myConn.getConnStatus();
                     break;
                 default:
@@ -98,6 +110,51 @@ public class dataAccess {
             return connected;
         }
     }
+
+    public Connection getConnection() {
+        switch (dbType) {
+        	case "ORA":
+        		return oraConn.getConexion();
+        	case "MYSQL":
+        		return myConn.getConexion();
+        	case "SQL":
+        		return sqlConn.getConexion();
+    		default:
+    			return null;
+        }
+    }
+    
+    public int execQuery(String vSQL) {
+        switch (dbType) {
+            case "ORA":
+                try {
+                    return oraConn.execute(vSQL);
+                } catch (Exception e) {
+                    logger.error("Error de Ejecucion SQL: "+ vSQL+ " details: "+ e.getMessage());
+                }
+                break;
+            case "MYSQL":
+                try {
+                    return myConn.execute(vSQL);
+                } catch (Exception e) {
+                    logger.error("Error de Ejecucion SQL: "+ vSQL+ " details: "+ e.getMessage());
+                }
+                break;
+            case "SQL":
+            	try {
+            		return sqlConn.execute(vSQL);
+            	} catch (Exception e) {
+            		logger.error("Error de Ejecucion SQL: "+ vSQL+ " details: "+ e.getMessage());
+            	}
+                break;
+            case "HBASE":
+                return 0;
+            default:
+            	return 0;
+        }
+        return 0;
+    }
+    
     
     public Object getQuery(String vSQL) {
         switch (dbType) {
@@ -109,7 +166,7 @@ public class dataAccess {
                     logger.error("Error de Ejecucion SQL: "+ vSQL+ " details: "+ e.getMessage());
                 }
                 break;
-            case "mySQL":
+            case "MYSQL":
                 try {
                     ResultSet rs = myConn.consultar(vSQL);
                     return rs;
@@ -118,6 +175,12 @@ public class dataAccess {
                 }
                 break;
             case "SQL":
+            	try {
+            		ResultSet rs = sqlConn.consultar(vSQL);
+            		return rs;
+            	} catch (Exception e) {
+            		logger.error("Error de Ejecucion SQL: "+ vSQL+ " details: "+ e.getMessage());
+            	}
                 break;
             case "HBASE":
                 break;
@@ -137,7 +200,7 @@ public class dataAccess {
                     //gDatos.getServerStatus().setIsValMetadataConnect(false);
                 }
                 break;
-            case "mySQL":
+            case "MYSQL":
                 try {
                     myConn.closeConexion();
                 } catch (Exception e) {
@@ -146,6 +209,12 @@ public class dataAccess {
                 }
                 break;
             case "SQL":
+                try {
+                    sqlConn.closeConexion();
+                } catch (Exception e) {
+                    logger.error("Error Cerrando Conexion: "+e.getMessage());
+                    //gDatos.getServerStatus().setIsValMetadataConnect(false);
+                }
                 break;
             case "HBASE":
                 break;

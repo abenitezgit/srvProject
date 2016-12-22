@@ -7,8 +7,6 @@ package srvmonitor;
 import utilities.globalAreaData;
 import java.io.* ; 
 import java.net.* ;
-import java.sql.SQLException;
-import java.util.logging.Level;
 import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -34,7 +32,7 @@ public class thMonitorSocket extends Thread {
     @Override
     public void run() {
         try {
-            logger.info("Starting Listener Thread Monitor Server port: " + gDatos.getServerInfo().getSrvPort());
+            logger.info("Iniciando Listener Thread Monitor Server port: " + gDatos.getServerInfo().getSrvPort());
             ServerSocket skServidor = new ServerSocket(gDatos.getServerInfo().getSrvPort());
             String inputData;
             String outputData = null;
@@ -42,18 +40,19 @@ public class thMonitorSocket extends Thread {
             String dAuth;
             JSONObject jHeader;
             JSONObject jData;
-            int result;
+            //int result;
             
             while (isSocketActive) {
                 Socket skCliente = skServidor.accept();
                 InputStream inpStr = skCliente.getInputStream();
                 DataInputStream dataInput = new DataInputStream( inpStr );
+                ObjectInputStream objInput = new ObjectInputStream(inpStr);
                 
                 //Espera Entrada
                 //
                 try {
-                    inputData  = dataInput.readUTF();
-                    logger.info("Recibiendo TX: "+inputData);
+                    //inputData  = dataInput.readUTF();
+                	inputData  = (String) objInput.readObject();
                     
                     jHeader = new JSONObject(inputData);
                     jData = jHeader.getJSONObject("data");
@@ -65,46 +64,51 @@ public class thMonitorSocket extends Thread {
 
                         switch (dRequest) {
                             case "keepAlive":
-                                logger.debug("Enviando a ejecutar: gSub.updateStatusService param: "+jData.getJSONObject("ServiceStatus"));
-                                result = gSub.updateStatusService(jData.getJSONObject("ServiceStatus"));
-                                logger.debug("resultado ejecucion: "+result);
-                                if (result==0) {
-                                    outputData = gSub.sendAssignedProc(jData.getJSONObject("ServiceStatus").getString("srvID"));
-                                    logger.info("Enviando Rx(): "+outputData);
+                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
+                                if (gSub.updateStatusService(jData.getJSONObject("serviceStatus"))) {
+                                	outputData = gSub.sendServiceInfo(jData.getJSONObject("serviceStatus").getString("srvID"));
                                 } else {
-                                    outputData = gSub.sendError(10);
+                                	outputData = gSub.sendError(10);
                                 }
                                 break;
                             case "getDate":
+                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
                                 outputData = gSub.sendDate();
                                 break;
                             case "getGroups":
-                                logger.info("ejecutando ... getGroups");
+                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
                                 outputData = gSub.sendGroups();
                                 break;
                             case "getTask":
-                                logger.info("ejecutando ... getGroups");
+                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
                                 outputData = gSub.sendTask();
                                 break;
+                            case "getGroup":
+                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
+                                outputData = gSub.sendGroup();
+                                break;
                             case "getStatus":
-                                logger.info("ejecutando ... getStatusServices");
+                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
                                 outputData = gSub.sendStatusServices();
                                 break;
                             case "getGroupsActive":
-                                logger.info("ejecutando ... getGroupsActive");
+                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
                                 outputData = gSub.sendGroupActives();
                                 break;
                             case "getAgeShow":
-                                logger.info("ejecutando ... getAgeShow");
+                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
                                 outputData = gSub.sendAgeShow();
                                 break;
                             case "putExecOSP":
+                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
                                 outputData = gSub.sendOkTX();
                                 break;
                             case "sendPing":
+                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
                                 outputData = "OK";
                                 break;
                             case "getFTPServices":
+                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
                                 outputData = gSub.sendFTPservices("*");
                                 break;
                             default:
@@ -115,30 +119,38 @@ public class thMonitorSocket extends Thread {
                     }
                 } catch (IOException | JSONException e) {
                     outputData = gSub.sendError(90);
-                } catch (SQLException ex) {
-                    java.util.logging.Logger.getLogger(thMonitorSocket.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (Exception ex) {
+                    outputData = gSub.sendError(90);
                 }
                      
                 //Envia Respuesta
                 //
                 OutputStream outStr = skCliente.getOutputStream();
-                DataOutputStream dataOutput = new DataOutputStream(outStr);
-                logger.debug("Enviando respuesta: "+ outputData);
+                //DataOutputStream dataOutput = new DataOutputStream(outStr);
+                ObjectOutputStream ObjOutput = new ObjectOutputStream(outStr); 
+                
+                //logger.info("Enviando RX: "+outputData);
+                
                 if (outputData==null) {
-                    dataOutput.writeUTF("{}");
+                    //dataOutput.writeUTF("{}");
+                    ObjOutput.writeObject("{}");
                 } else {
-                    dataOutput.writeUTF(outputData);
+                    //dataOutput.writeUTF(outputData);
+                    ObjOutput.writeObject(outputData);
                 }
                 
                 //Cierra Todas las conexiones
                 //
                 inpStr.close();
                 dataInput.close();
+                ObjOutput.close();
+                objInput.close();
                 skCliente.close();
             }
+            skServidor.close();
         
         } catch (NumberFormatException | IOException e) {
-            logger.error(e.getMessage());
+            logger.error("Error general en MonitoSocket: "+e.getMessage());
         }
     }
 }

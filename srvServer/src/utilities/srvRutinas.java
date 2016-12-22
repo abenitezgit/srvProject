@@ -6,19 +6,23 @@
 package utilities;
 
 import dataClass.AssignedTypeProc;
-import dataClass.PoolProcess;
+import dataClass.Interval;
+import dataClass.ServiceStatus;
+import dataClass.TaskProcess;
+
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
 import javax.management.Attribute;
 import javax.management.AttributeList;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.SerializationConfig;
 import org.apache.log4j.Logger;
@@ -174,102 +178,102 @@ public class srvRutinas {
 //        }
 //    }
 
-    public synchronized String updatePoolProcess(JSONObject jData) throws IOException {
-        try {
-            
-            /**
-             * Actualiza informacion que es recibida desde srvMonitor
-             * Debe verificar nuevas asignaciones de procesos, detenciones, etc.
-             */
-            
-            logger.debug("Data recibida para updatePoolProcess: "+jData.toString());
-            
-            JSONArray jArray = jData.getJSONArray("poolProcess");
-            
-            int numItems = jArray.length();
-
-            if (numItems>0) {
- 
-                PoolProcess poolProcess = new PoolProcess();
-                
-                @SuppressWarnings("unused")
-				List<PoolProcess> lstPoolProcess = new ArrayList<>();
-
-                logger.info("Se han recibido: "+jArray.length()+" asignaciones de Ejecución de Procesos.");
-            
-                //Para cada proceso recibido
-                //
-                for (int i=0; i<jArray.length(); i++) {
-                    poolProcess = (PoolProcess) serializeJSonStringToObject(jArray.getJSONObject(i).toString(), PoolProcess.class);
-
-                    //Extrae posicion en lista actual si es que existe
-                    //
-                    int indexPool;
-                    if (poolProcess.getTypeProc().equals("ETL")) {
-                        indexPool = gDatos.getIndexOfPoolProcess(poolProcess.getProcID(), poolProcess.getIntervalID());
-                    } else {
-                        indexPool = gDatos.getIndexOfPoolProcess(poolProcess.getProcID());
-                    }
-                    
-                    /**
-                     * Valida informacion de status que posee el proceso
-                     */
-                    switch (poolProcess.getStatus()) {
-                        case "Assigned":
-                            /**
-                             * Valida Si ya se encuentra en pool.
-                             *
-                             */
-                            if (indexPool!=-1) {
-                                /**
-                                 * Generar acciones de actualizacion
-                                 * Pendientes.
-                                 * (por ahora no hay accion si ya existe)
-                                 */
-                            
-                            } else {
-                                /**
-                                 * No se encontro en pool
-                                 * Se ingresará como nuevo.
-                                 */
-                                poolProcess.setStatus("Ready");
-                                poolProcess.setUpdateTime(getDateNow());
-                                gDatos.updateLstPoolProcess(indexPool, poolProcess, false);
-                            }
-                            break;
-                        case "Stopped":
-                            /**
-                             * Valida Si ya se encuentra en pool.
-                             *
-                             */
-                            if (indexPool!=-1) {
-                                /**
-                                 * Si actual status=Ready, se marcara como Released para ser devuelta al pool de control
-                                 * del srvMOnitor.
-                                 */
-                            
-                            } else {
-                                /**
-                                 * No se encontro en pool
-                                 * No hay accion
-                                 * Hubo algun problema de perdida del registro.
-                                 */
-                            }
-                            break;
-                        
-                    } //Fin switch()
-                    
-                } //Fin for()
-                logger.info("Total de Ejecuciones de Procesos en lista PoolProcess: " + gDatos.getServiceStatus().getLstPoolProcess().size());
-            }
-            return sendOkTX();
-        } catch (JSONException | IOException e) {
-            logger.error("Error updatePoolProcess: "+e.getMessage());                                                                                                                                                                                                                                                                                                             return sendError(10, e.getMessage());
-        }
-    
-    }
-    
-    public String sendDataKeep(String type)  {
+//    public synchronized String updatePoolProcess(JSONObject jData) throws IOException {
+//        try {
+//            
+//            /**
+//             * Actualiza informacion que es recibida desde srvMonitor
+//             * Debe verificar nuevas asignaciones de procesos, detenciones, etc.
+//             */
+//            
+//            logger.debug("Data recibida para updatePoolProcess: "+jData.toString());
+//            
+//            JSONArray jArray = jData.getJSONArray("poolProcess");
+//            
+//            int numItems = jArray.length();
+//
+//            if (numItems>0) {
+// 
+//                PoolProcess poolProcess = new PoolProcess();
+//                
+//                @SuppressWarnings("unused")
+//				List<PoolProcess> lstPoolProcess = new ArrayList<>();
+//
+//                logger.info("Se han recibido: "+jArray.length()+" asignaciones de Ejecución de Procesos.");
+//            
+//                //Para cada proceso recibido
+//                //
+//                for (int i=0; i<jArray.length(); i++) {
+//                    poolProcess = (PoolProcess) serializeJSonStringToObject(jArray.getJSONObject(i).toString(), PoolProcess.class);
+//
+//                    //Extrae posicion en lista actual si es que existe
+//                    //
+//                    int indexPool;
+//                    if (poolProcess.getTypeProc().equals("ETL")) {
+//                        indexPool = gDatos.getIndexOfPoolProcess(poolProcess.getProcID(), poolProcess.getIntervalID());
+//                    } else {
+//                        indexPool = gDatos.getIndexOfPoolProcess(poolProcess.getProcID());
+//                    }
+//                    
+//                    /**
+//                     * Valida informacion de status que posee el proceso
+//                     */
+//                    switch (poolProcess.getStatus()) {
+//                        case "Assigned":
+//                            /**
+//                             * Valida Si ya se encuentra en pool.
+//                             *
+//                             */
+//                            if (indexPool!=-1) {
+//                                /**
+//                                 * Generar acciones de actualizacion
+//                                 * Pendientes.
+//                                 * (por ahora no hay accion si ya existe)
+//                                 */
+//                            
+//                            } else {
+//                                /**
+//                                 * No se encontro en pool
+//                                 * Se ingresará como nuevo.
+//                                 */
+//                                poolProcess.setStatus("Ready");
+//                                poolProcess.setUpdateTime(getDateNow());
+//                                gDatos.updateLstPoolProcess(indexPool, poolProcess, false);
+//                            }
+//                            break;
+//                        case "Stopped":
+//                            /**
+//                             * Valida Si ya se encuentra en pool.
+//                             *
+//                             */
+//                            if (indexPool!=-1) {
+//                                /**
+//                                 * Si actual status=Ready, se marcara como Released para ser devuelta al pool de control
+//                                 * del srvMOnitor.
+//                                 */
+//                            
+//                            } else {
+//                                /**
+//                                 * No se encontro en pool
+//                                 * No hay accion
+//                                 * Hubo algun problema de perdida del registro.
+//                                 */
+//                            }
+//                            break;
+//                        
+//                    } //Fin switch()
+//                    
+//                } //Fin for()
+//                //logger.info("Total de Ejecuciones de Procesos en lista PoolProcess: " + gDatos.getServiceStatus().getLstPoolProcess().size());
+//            }
+//            return sendOkTX();
+//        } catch (JSONException | IOException e) {
+//            logger.error("Error updatePoolProcess: "+e.getMessage());                                                                                                                                                                                                                                                                                                             return sendError(10, e.getMessage());
+//        }
+//    
+//    }
+     
+    public String sendStatusService()  {
         //
         ObjectMapper mapper = new ObjectMapper();
         
@@ -281,23 +285,107 @@ public class srvRutinas {
             JSONObject jHeader = new JSONObject();
             JSONObject jData = new JSONObject();
             
+            gDatos.getServiceStatus().setMapAssignedTypeProc(gDatos.getMapAssignedTypeProc());
+            gDatos.getServiceStatus().setMapTask(gDatos.getMapTask());
+            gDatos.getServiceStatus().setMapInterval(gDatos.getMapInteval());
+            
             JSONObject jo = new JSONObject(mapper.writeValueAsString(gDatos.getServiceStatus()));
             
-            jData.put("ServiceStatus", jo);
+            jData.put("serviceStatus", jo);
             
-            jHeader.put("data", jData);
+            jHeader.put("data", jData);            
+            jHeader.put("auth", gDatos.getServiceInfo().getAuthKey());
+            jHeader.put("request", "keepAlive");
             
-            if (type.equals("keep")) {
-                jHeader.put("auth", gDatos.getServiceInfo().getAuthKey());
-                jHeader.put("request", "keepAlive");
-            
-            } else {
-                jHeader.put("result", "OK");
-            }
             
             return jHeader.toString();
         } catch (JSONException | IOException e) {
             return sendError(10,e.getMessage());
+        }
+    }
+    
+    public synchronized void updateStatusService(JSONObject jData) {
+    	
+    	ServiceStatus serviceStatus = new ServiceStatus();
+    	TaskProcess taskProcess 	= new TaskProcess();
+    	Map<String, Interval> vMapInterval = new TreeMap<>();
+    	
+    	try {
+    		logger.info("Serializando objeto serviceStatus");
+			serviceStatus = (ServiceStatus) serializeJSonStringToObject(jData.getString("serviceStatus"), ServiceStatus.class);
+		} catch (IOException e) {
+			logger.error("Error Serializando objeto serviceStatus");
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	
+    	/*
+    	 * Actualiza Mapa de Intervalos
+    	 * genera una copia de la lista extraida desde el objeto serviceStatus
+    	 */
+    	vMapInterval = new TreeMap<>(serviceStatus.getMapInterval());
+    	
+    	//recorre la lista extraida par actualizar la global
+    	for (Map.Entry<String, Interval> entryInt : vMapInterval.entrySet()) {
+    		//la key del MapInterval es procID+intervalID
+    		if (gDatos.getMapInteval().containsKey(entryInt.getKey())) {
+    			//Actualiza los MapInterval en ejecución siempre y cuandon vengan
+    			//con status de Abort o Pause. Y solo actualiza interval que están em Ready
+    			String vStatus = entryInt.getValue().getStatus();
+    			if (vStatus.equals("Abort")||vStatus.equals("Pause")) {
+    				if (gDatos.getMapInteval().get(entryInt.getKey()).getStatus().equals("Ready")) {
+    					gDatos.getMapInteval().get(entryInt.getKey()).setStatus(vStatus);
+    					gDatos.getMapInteval().get(entryInt.getKey()).setFecUpdate(getDateNow());
+    				}
+    			}
+    		} else {
+    			gDatos.getMapInteval().put(entryInt.getKey(), entryInt.getValue());
+    		}
+    	}
+    	
+    	/**
+    	 * Actualiza el Map AssignedTypeProc
+    	 */
+    	logger.info("Actualiza Map AssignedTypeProc");
+    	gDatos.setMapAssignedTypeProc(serviceStatus.getMapAssignedTypeProc());
+    	
+    	/**
+    	 * Analizar este tipo de actualizacion por posibles perdidas de sincronizacion
+    	 */
+    	logger.info("Actualiza serviceStatus global");
+    	gDatos.setServiceStatus(serviceStatus);
+    	
+    	/**
+    	 * Actualiza las Task Asignadas
+    	 */
+    	logger.info("Actualiza MapTask");
+        for (Map.Entry<String, TaskProcess> entry : serviceStatus.getMapTask().entrySet()) {
+        	String key = entry.getKey();
+        	taskProcess = entry.getValue();
+        	
+        	//Valida si la Task ya esta creada
+        	if (gDatos.getMapTask().containsKey(key)) {
+        		/**
+        		 * Si existe la Task actualizar su status solo si fue abortada, suspendida
+        		 * y si no esta en ejecución
+        		 */
+        		if (!gDatos.getMapTask().get(key).getStatus().equals("Running")&&!gDatos.getMapTask().get(key).getStatus().equals("Finished")) {
+        			gDatos.getMapTask().replace(key, taskProcess);
+        		}
+        	} else {
+        		/**
+        		 * No existe, hay que agregarla
+        		 */
+        		gDatos.getMapTask().put(key, taskProcess);
+        	}
+        	
+            //try {
+				logger.info("Actualizada Task: " + entry.getKey()); // + ", valor=" + serializeObjectToJSon(gDatos.getMapTask().get(key), false));
+			//} catch (IOException e) {
+				// TODO Auto-generated catch block
+				//logger.error("Error desplegando desserializacion objeto taskProcess");
+				//e.printStackTrace();
+			//}
         }
     }
     

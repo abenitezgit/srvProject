@@ -4,16 +4,19 @@
 package utilities;
 
 import dataClass.AssignedTypeProc;
-import dataClass.Grupo;
-import dataClass.PoolProcess;
+import dataClass.Interval;
 import dataClass.ServiceStatus;
+import dataClass.TaskProcess;
+
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.SerializationConfig;
@@ -58,23 +61,8 @@ public class srvRutinas {
         //List<Grupo> lstGroup = new ArrayList<>();
         
 		try {
-//			String vProcType;
-//			lstGroup = gDatos.getLstActiveGrupos();
-//			
-//			int numGroups = lstGroup.size();
-//			
-//			for (int i=0; i<numGroups; i++) {
-//				/**
-//				 * Lee los process asignados al grupo para determinar el objeto a incorporar en params
-//				 */
-//				int numProcs = lstGroup.get(i).getLstProcess().size();
-//				for (int j=0; j<numProcs; j++) {
-//					vProcType = serializeObjectToJSon(gDatos.getLstActiveGrupos().get(i).getLstProcess().get(j), false);
-//					System.out.println("Grupo("+i+") - process("+j+"): "+vProcType);
-//				}
-//			}
 			
-			JSONArray jArray = new JSONArray(serializeObjectToJSon(gDatos.getLstActiveGrupos(), false));
+			JSONArray jArray = new JSONArray(serializeObjectToJSon(gDatos.getMapGrupo(), false));
 			
 			//String vGroups = serializeObjectToJSon(gDatos.getLstActiveGrupos(), false);
 			//System.out.println("Groups: "+vGroups);
@@ -93,6 +81,29 @@ public class srvRutinas {
 		}
     	
     }
+    
+    public String sendGroup() {
+    
+	    JSONObject jHeader = new JSONObject();
+	    JSONObject jData = new JSONObject();
+	    //List<Grupo> lstGroup = new ArrayList<>();
+	    
+		try {
+			
+			JSONObject jo = new JSONObject(serializeObjectToJSon(gDatos.getMapGrupo(), false));
+			
+			jData.put("group", jo);
+	        jHeader.put("data",jData);
+	        jHeader.put("result", "OK");
+	            
+	        return jHeader.toString();
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		}
+    }
 
     public String sendTask() {
         JSONObject jHeader = new JSONObject();
@@ -100,28 +111,15 @@ public class srvRutinas {
         //List<Grupo> lstGroup = new ArrayList<>();
         
 		try {
-//			String vProcType;
-//			lstGroup = gDatos.getLstActiveGrupos();
-//			
-//			int numGroups = lstGroup.size();
-//			
-//			for (int i=0; i<numGroups; i++) {
-//				/**
-//				 * Lee los process asignados al grupo para determinar el objeto a incorporar en params
-//				 */
-//				int numProcs = lstGroup.get(i).getLstProcess().size();
-//				for (int j=0; j<numProcs; j++) {
-//					vProcType = serializeObjectToJSon(gDatos.getLstActiveGrupos().get(i).getLstProcess().get(j), false);
-//					System.out.println("Grupo("+i+") - process("+j+"): "+vProcType);
-//				}
-//			}
 			
 			JSONObject jo = new JSONObject(serializeObjectToJSon(gDatos.getMapTask(), false));
+			JSONObject joInterval = new JSONObject(serializeObjectToJSon(gDatos.getMapInterval(), false));
 			
 			//String vGroups = serializeObjectToJSon(gDatos.getLstActiveGrupos(), false);
 			//System.out.println("Groups: "+vGroups);
 			
 			//jArray.put(vGroups);
+			jData.put("interval", joInterval);
 			jData.put("task", jo);
 	        jHeader.put("data",jData);
 	        jHeader.put("result", "OK");
@@ -337,7 +335,7 @@ public class srvRutinas {
             JSONObject jHeader = new JSONObject();
             JSONArray jArray;
             
-            jArray = new JSONArray(serializeObjectToJSon(gDatos.getLstServiceStatus(), false));
+            jArray = new JSONArray(serializeObjectToJSon(gDatos.getMapServiceStatus(), false));
             
             jData.put("servicios", jArray);
             jHeader.put("data",jData);
@@ -349,44 +347,86 @@ public class srvRutinas {
         }
     }
     
-    public int updateStatusService(JSONObject jData) {
+    public boolean updateStatusService(JSONObject jData) {
         try {
             ServiceStatus serviceStatus;
-            List<AssignedTypeProc> lstAssignedTypeProc;
             
             serviceStatus = (ServiceStatus) serializeJSonStringToObject(jData.toString(), ServiceStatus.class);
+            String srvID = serviceStatus.getSrvID();
             
-            int numItems = gDatos.getLstServiceStatus().size();
-            boolean itemFound = false;
+            logger.info("Actualizando Servicio informado: "+srvID+ " Status: "+serviceStatus.getSrvEnable());
+            
+            if (gDatos.getMapServiceStatus().containsKey(srvID)) {
+            	/**
+            	 * Existe el servicios inscrito
+            	 * Se actualiza
+            	 */
+            	gDatos.getMapServiceStatus().replace(srvID, serviceStatus);
+            } else {
+            	/**
+            	 * No existe, se procede a crear
+            	 */
+            	gDatos.getMapServiceStatus().put(srvID, serviceStatus);
+            }
             
             /**
-             * Realiza la actualizacion de statusServices sin actualizar la lista de asignaciones lstAssignedTypeProc()
+             * Actualizando la lista de Assigned Type Proc si la global esta vacia y hay datos 
+             * desde el servicio
+             */            
+            for (Map.Entry<String, AssignedTypeProc> entry : serviceStatus.getMapAssignedTypeProc().entrySet()) {
+            	if (!gDatos.getMapAssignedTypeProc().containsKey(entry.getKey())) {
+            		gDatos.getMapAssignedTypeProc().put(entry.getKey(), entry.getValue());
+            	}
+            }
+            
+            /**
+             * Actualiza Task del servicio
              */
-            for (int i=0; i<numItems; i++) {
-                if (gDatos.getLstServiceStatus().get(i).getSrvID().equals(serviceStatus.getSrvID())) {
-                    lstAssignedTypeProc = gDatos.getLstServiceStatus().get(i).getLstAssignedTypeProc();
-                    serviceStatus.setLstAssignedTypeProc(lstAssignedTypeProc);
-                    gDatos.getLstServiceStatus().set(i, serviceStatus);
-                    itemFound = true;
-                }
+            logger.info("Actualizando Status de Task informadadas por el servicio "+srvID);
+            
+            for (Map.Entry<String, TaskProcess> entry : serviceStatus.getMapTask().entrySet()) {
+            	/**
+            	 * Como siempre se envian Task en estado Assigned, el retorno podria ser el mismo
+            	 * o haber cambio por el servicio ejecutor.
+            	 * Asi que no esta mal que siempre se actualice
+            	 */
+            	gDatos.replaceMapTask(entry.getKey(), entry.getValue());
+            }
+
+            /**
+             * Actualiza Intervalos
+             */
+            Interval interval;
+            for (Map.Entry<String, Interval> entry : serviceStatus.getMapInterval().entrySet()) {
+            	interval = entry.getValue();
+            	if (gDatos.getMapInterval().containsKey(entry.getKey())) {
+            		//Si existe lo actualiza
+            		gDatos.getMapInterval().replace(entry.getKey(), interval);
+            	} else {
+            		gDatos.getMapInterval().put(entry.getKey(), interval);
+            	}
             }
             
-            if (!itemFound) {
-                gDatos.getLstServiceStatus().add(serviceStatus);
-            }
             
-            logger.debug("Se genera lista serviceStatus: "+ serializeObjectToJSon(gDatos.getLstServiceStatus(), true));
+            logger.debug("Updated serviceStatus: "+serializeObjectToJSon(serviceStatus, false));
+            logger.debug("Updated AssignedTypeProc: "+serializeObjectToJSon(gDatos.getMapAssignedTypeProc(), false));
+            logger.debug("Updated MapTask: "+serializeObjectToJSon(gDatos.getMapTask(), false));
+            logger.debug("Updated Intervak: "+serializeObjectToJSon(gDatos.getMapInterval(), false));
             
-            return 0;
+            return true;
         } catch (JSONException | IOException e) {
-            return 1;
+        	logger.error("Error actualizando status informado por servicio "+e.getMessage());
+            return false;
+        } catch (Exception e) {
+        	logger.error("Error actualizando status informado por servicio "+e.getMessage());
+            return false;        	
         }
     }
     
     public String sendGroupActives() throws JSONException, IOException {
         JSONObject jData = new JSONObject();
         JSONObject jHeader = new JSONObject();
-    	JSONArray groupsActive = new JSONArray(serializeObjectToJSon(gDatos.getLstActiveGrupos(), false));
+    	JSONArray groupsActive = new JSONArray(serializeObjectToJSon(gDatos.getLstActiveAgendas(), false));
     	
         jData.put("groupsActive", groupsActive);
         jHeader.put("data",jData);
@@ -410,52 +450,78 @@ public class srvRutinas {
     }
     
     
-    public String sendAssignedProc(String srvID) throws SQLException {
+    public String sendServiceInfo(String srvID)  {
         try {
-            List<PoolProcess> lstPoolProcess = new ArrayList<>();
-            List<AssignedTypeProc> lstAssignedTypeProc = null;
             JSONObject jData = new JSONObject();
             JSONObject jHeader = new JSONObject();
+            ServiceStatus serviceStatus = new ServiceStatus();
+            Map<String, AssignedTypeProc> mapAssignedTypeProc = new TreeMap<>();
+            Map<String, TaskProcess> mapTask = new TreeMap<>();
+            Map<String, AssignedTypeProc> sendMapAssignedTypeProc = new TreeMap<>();
+            Map<String, TaskProcess> sendMapTask = new TreeMap<>();
+            Map<String, Interval> sendMapInterval = new TreeMap<>();
 
+            
             /**
              * Extrae las asigcaciones de tipos de procesos desde la base de datos
              */
-            int exitCode = getMDprocAssigned();
+            if (getMDprocAssigned(srvID)) {
             
-            if (exitCode!=0) {
-                logger.warn("No es posible conectarse a la Metdata para extraer los Procesos Asignados..se utilizará lista actual.");
-            } 
-            
-            int numItems = gDatos.getLstServiceStatus().size();
-
-            for (int i=0; i<numItems; i++) {
-                if (gDatos.getLstServiceStatus().get(i).getSrvID().equals(srvID)) {
-                    lstAssignedTypeProc = gDatos.getLstServiceStatus().get(i).getLstAssignedTypeProc();
-                }
+            	logger.debug("Extraccion de AssignedTypeProc desde Metadata exitosa");
+            	logger.debug(srvID+" exist mapServiceStatus: "+gDatos.getMapServiceStatus().containsKey(srvID));
+            	
+            	
+	            if (gDatos.getMapServiceStatus().containsKey(srvID)) {
+	            	serviceStatus = gDatos.getMapServiceStatus().get(srvID);
+	            	mapTask = new TreeMap<String, TaskProcess>(gDatos.getMapTask());
+	            	mapAssignedTypeProc = new TreeMap<String, AssignedTypeProc>(gDatos.getMapAssignedTypeProc());
+	            	
+	            	
+	            	/**
+	            	 * Actualiza las Asignaciones de Procesos
+	            	 */
+	                for (Map.Entry<String, AssignedTypeProc> entry : mapAssignedTypeProc.entrySet()) {
+	                	if (entry.getKey().substring(0,8).equals(srvID)) {
+	                		sendMapAssignedTypeProc.put(entry.getKey(), entry.getValue());
+	                	}
+	                }
+	                
+	                serviceStatus.setMapAssignedTypeProc(sendMapAssignedTypeProc);
+	                
+	                /**
+	                 * Actualiza las asignaciones de Task
+	                 */
+	                //logger.debug("mapTask: "+serializeObjectToJSon(mapTask, false));
+	                for (Map.Entry<String, TaskProcess> entry : mapTask.entrySet()) {
+	            		if (entry.getValue().getSrvID().equals(srvID)) {
+	            			sendMapTask.put(entry.getKey(), entry.getValue());
+	            		}
+	                }
+	                
+	                serviceStatus.setMapTask(sendMapTask);
+	                
+	                /**
+	                 * Actualiza las asignaciones de Intervalos
+	                 */
+	                serviceStatus.setMapInterval(gDatos.getMapInterval());
+	                
+	            }
             }
             
+            gDatos.getMapServiceStatus().replace(srvID, serviceStatus);
             
-            int numPools = gDatos.getLstPoolProcess().size();
-            for (int i=0; i<numPools; i++) {
-                if (gDatos.getLstPoolProcess().get(i).getSrvID().equals(srvID)) {
-                    lstPoolProcess.add(gDatos.getLstPoolProcess().get(i));
-                }
-            }
+            String serviceString = serializeObjectToJSon(gDatos.getMapServiceStatus().get(srvID), false);
             
-            JSONArray assignedTypeProc = new JSONArray(serializeObjectToJSon(lstAssignedTypeProc, false));
-            JSONArray poolProcess = new JSONArray(serializeObjectToJSon(lstPoolProcess, false));
-            
-            /**
-             * Se envian las listas de assignedTypeProc y poolProcess en forma independiente, sin asignacion al serviceStatus object
-             */
-
-            jData.put("assignedTypeProc", assignedTypeProc);
-            jData.put("poolProcess", poolProcess);
+            jData.put("serviceStatus", serviceString);
             jHeader.put("data",jData);
             jHeader.put("result", "OK");
             
             return jHeader.toString();
         } catch (IOException | JSONException e) {
+        	logger.error("Error IOException or JSONException desconocido en método sendServiceInfo: "+e.getMessage());
+            return sendError(1,e.getMessage());
+        } catch (Exception e) {
+        	logger.error("Error Exception desconocido en método sendServiceInfo: "+e.getMessage());
             return sendError(1,e.getMessage());
         }
     }
@@ -463,7 +529,7 @@ public class srvRutinas {
     public String sendDate() {
         try {
             JSONObject jData = new JSONObject();
-            JSONArray ja = new JSONArray();
+            //JSONArray ja = new JSONArray();
             JSONObject jHeader = new JSONObject();
 
             jData.put("fecha", getDateNow("yyyy-MM-dd HH:mm:ss"));
@@ -475,39 +541,60 @@ public class srvRutinas {
         }
     }
                   
-    public int getMDprocAssigned() throws SQLException, IOException {
+    public boolean getMDprocAssigned(String srvID)  {
         try {
+        	logger.info("Buscando AssignedTypeProc desde Metadata para servicio: "+srvID);
             MetaData metadata = new MetaData(gDatos);
             if (gDatos.getServerStatus().isIsValMetadataConnect()) {
                 JSONArray ja;
-                JSONObject jo = new JSONObject();
-                ServiceStatus serviceStatus;
+                AssignedTypeProc assignedTypeProc = new AssignedTypeProc();
 
                 String vSQL = "select srvID, srvDesc, srvEnable, srvTypeProc "
-                        + "     from tb_services"
+                        + "     from tb_services "
+                		+ "     where srvID = '"+srvID+"'"
                         + "     order by srvID";
                 try (ResultSet rs = (ResultSet) metadata.getQuery(vSQL)) {
                     if (rs!=null) {
                         while (rs.next()) {
 
                             ja = new JSONArray(rs.getString("srvTypeProc"));
-                            jo.put("lstAssignedTypeProc", ja);
-                            jo.put("srvID", rs.getString("srvID"));
-                            jo.put("srvEnable", rs.getInt("srvEnable"));
-
-                            serviceStatus = (ServiceStatus) serializeJSonStringToObject(jo.toString(), ServiceStatus.class);
-
-                            gDatos.updateLstServiceStatus(serviceStatus);
+                            
+                            logger.info("Se encontraron "+ja.length()+" AssignedTypeProc para servicio "+srvID);
+                            
+                            //Ejemplo de Lista JSON de retorno
+                            /* [ 
+                            	 {"typeProc":"OSP","priority":3,"maxThread":3},
+                            	 {"typeProc":"ETL","priority":3,"maxThread":2},
+                            	 {"typeProc":"FTP","priority":1,"maxThread":2},
+                            	 {"typeProc":"LOR","priority":2,"maxThread":2}
+                               ]
+                            
+                            */
+                            
+                            /**
+                             * Se genera el map correspondiente
+                             */
+                            for (int i=0; i<ja.length(); i++) {
+                            	assignedTypeProc = (AssignedTypeProc) serializeJSonStringToObject(ja.get(i).toString(), AssignedTypeProc.class);
+                            	gDatos.getMapAssignedTypeProc().put(srvID+":"+assignedTypeProc.getTypeProc(), assignedTypeProc);
+                            }
                         }
+                    } else {
+                    	logger.error("No hay AssignedTypeProc para servico "+srvID);
                     }
                     rs.close();
                 }
                 metadata.closeConnection();
+                logger.info("Asignación recuperadas desde metadata : "+serializeObjectToJSon(gDatos.getMapAssignedTypeProc(), false));
+            } else {
+            	logger.warn("No fue validada la conexiona metadata recuperando AssignedTypeProc");
+            	logger.info("Se usaran las asignaciones existentes : "+serializeObjectToJSon(gDatos.getMapAssignedTypeProc(), false));
             }
-            return 0;
-        } catch (SQLException | JSONException e) {
-            logger.error("Error recuperando Procesos Asignados. "+ e.getMessage());
-            return 1;
+            
+            return true;
+        } catch (SQLException | JSONException | IOException e) {
+            logger.error("Error recuperando AssignedTypeProc. "+ e.getMessage());
+            return false;
         }
     }
     
@@ -524,7 +611,8 @@ public class srvRutinas {
         }
     }
     
-    public Object serializeJSonStringToObject (String parseJson, Class className) throws IOException {
+    @SuppressWarnings("unchecked")
+	public Object serializeJSonStringToObject (String parseJson, @SuppressWarnings("rawtypes") Class className) throws IOException {
         try {
             ObjectMapper mapper = new ObjectMapper();
 

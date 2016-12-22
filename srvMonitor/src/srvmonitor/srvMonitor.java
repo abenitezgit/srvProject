@@ -7,13 +7,13 @@ package srvmonitor;
 
 import utilities.globalAreaData;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.TreeMap;
+
 import utilities.srvRutinas;
 import org.apache.log4j.Logger;
 
@@ -65,26 +65,50 @@ public class srvMonitor {
     static class mainTimerTask extends TimerTask {
         //Declare los Thread de cada proceso
         //
-    	Thread thInscribe = new thInscribeGroup(gDatos); //TimerTask
-        Thread thKeep = new thKeepAliveServices(gDatos); //TimerTask
-        Thread thAgendas;
+    	Thread thAsignaTask 	= new thAsignaTask(gDatos); //TimerTask
+        Thread thKeep 			= new thKeepAliveServices(gDatos); //TimerTask
+        Thread thInscribeTask 	= new thInscribeTask(gDatos); //TimerTask
+        Thread thUpdateStatusDB = new thUpdateStatusDB(gDatos); //TimerTask
         Thread thSocket;
         
         //Constructor de la clase
         public mainTimerTask() {
         }
 
-        @Override
+        @SuppressWarnings("deprecation")
+		@Override
         public void run() { 
-            logger.info("Ejecutando MainTimerTask...");
+    	try {
+            logger.info("Iniciando MainTimerTask de srvMonitor...");
+            
+            /**
+             * Valida Conexion a MetaData
+             */
+            try {
+                MetaData metadata = new MetaData(gDatos);
+                if (gDatos.getServerStatus().isIsValMetadataConnect()) {
+                    metadata.closeConnection();
+                    logger.info("Se ha validado conexion a MetaData");
+                }
+            } catch (Exception e) {
+                logger.error("No se ha podido validar conexion a MetaData.."+e.getMessage());
+            }
 
-            Map<String , Boolean> mapThread = new HashMap<>();
-        	mapThread.put("thMonitorSocket", false);
-        	mapThread.put("thSubKeep", false);
-        	mapThread.put("thActiveGroups", false);
-        	mapThread.put("thSubInscribeGroup", false);
+            
+            /**
+             * Revisando Thread de Modulos Activos
+             */
             
             logger.info("Revisando Threads de Modulos Activos...");
+            
+            Map<String , Boolean> mapThread = new TreeMap<>();
+        	mapThread.put("thMonitorSocket", false);
+        	mapThread.put("thSubKeep", false);
+        	mapThread.put("thSubInscribeTask", false);
+        	mapThread.put("thSubAsignaTask", false);
+        	mapThread.put("thSubUpdateStatus", false);
+            
+            
             //Thread tr = Thread.currentThread();
             Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
             //System.out.println("Current Thread: "+tr.getName()+" ID: "+tr.getId());
@@ -96,11 +120,14 @@ public class srvMonitor {
                 if (t.getName().equals("thSubKeep")) {
                 	mapThread.replace("thSubKeep", true);
                 }
-                if (t.getName().equals("thActiveGroups")) {
-                	mapThread.replace("thActiveGroups", true);
+                if (t.getName().equals("thSubInscribeTask")) {
+                	mapThread.replace("thSubInscribeTask", true);
                 }
-                if (t.getName().equals("thSubInscribeGroup")) {
-                	mapThread.put("thSubInscribeGroup", true);
+                if (t.getName().equals("thSubAsignaTask")) {
+                	mapThread.put("thSubAsignaTask", true);
+                }
+                if (t.getName().equals("thSubUpdateStatus")) {
+                	mapThread.put("thSubUpdateStatus", true);
                 }
             }
             
@@ -118,41 +145,44 @@ public class srvMonitor {
             //
             try {
                 if (!mapThread.get("thMonitorSocket")) {
+                	logger.info("Iniciando Thread thMonitorSocket....normal...");
                     thSocket = new thMonitorSocket(gDatos);
                     thSocket.setName("thMonitorSocket");
                     thSocket.start();
-                    logger.info("Iniciando thMonitor Server....normal...");
                 } 
             } catch (Exception e) {
                 mapThread.replace("thMonitorSocket", false);
                 logger.error("Error al Iniciar socket monitor server "+ thSocket.getName() + " : "+e.getMessage());
+                if (thSocket.isAlive()) {
+                	thSocket.destroy();
+                }
             }
             
             //Levanta KeepAlive
             //
             try {
                 if (!mapThread.get("thSubKeep")) {
+                	logger.info(" Iniciando Thread thSubKeep....");
                     thKeep = new thKeepAliveServices(gDatos);
                     thKeep.setName("thSubKeep");
                     thKeep.start();
-                    logger.info(" Iniciando thread KeepAlive....");
                 } 
             } catch (Exception e) {
             	mapThread.replace("thSubKeep", false);
                 logger.error("Error al Iniciar thread: "+ thKeep.getName());
             }
             
-            //Levanta IncribeGroups
+            //Levanta AsignaTask
             //
             try {
-                if (!mapThread.get("thSubInscribeGroup")) {
-                    thInscribe.setName("thSubInscribeGroup");
-                    thInscribe.start();
-                    logger.info(" Iniciando thread thInscribe....");
+                if (!mapThread.get("thSubAsignaTask")) {
+                	logger.info(" Iniciando Thread thSubAsignaTask....");
+                	thAsignaTask.setName("thSubAsignaTask");
+                    //thAsignaTask.start();
                 } 
             } catch (Exception e) {
-            	mapThread.replace("thSubInscribeGroup", false);
-                logger.error("Error al Iniciar thread: "+ thInscribe.getName());
+            	mapThread.replace("thSubAsignaTask", false);
+                logger.error("Error al Iniciar thread: "+ thAsignaTask.getName());
             }            
             
             
@@ -160,22 +190,41 @@ public class srvMonitor {
             //
             
             if (gDatos.getServerStatus().isIsValMetadataConnect()) {
-                //Levanta Thread Busca Agendas Activas
+                //Levanta Thread Busca Agenas, Asocia Grupos e Inscribe Task
                 //
                 try {
-                    if (!mapThread.get("thActiveGroups")) {
-                        thAgendas = new thActiveGroups(gDatos);  
-                        thAgendas.setName("thActiveGroups");
-                        thAgendas.start();
-                        logger.info(" Iniciando thActiveGroups....normal...");
+                    if (!mapThread.get("thSubInscribeTask")) {
+                    	logger.info(" Iniciando Thread thSubInscribeTask....normal...");
+                        thInscribeTask = new thInscribeTask(gDatos);  
+                        thInscribeTask.setName("thSubInscribeTask");
+                        thInscribeTask.start();
                     } 
                 } catch (Exception e) {
-                    mapThread.replace("thActiveGroups", false);
-                    logger.error("Error al Iniciar Thread Agendas "+ thAgendas.getName());
+                    mapThread.replace("thSubInscribeTask", false);
+                    logger.error("Error al Iniciar Thread thSubInscribeTask "+ thInscribeTask.getName());
                 }
+
+                //Levanta Thread Update DB
+                //
+                try {
+                    if (!mapThread.get("thSubUpdateStatus")) {
+                    	logger.info(" Iniciando Thread thSubUpdateStatus....normal...");
+                    	thUpdateStatusDB = new thUpdateStatusDB(gDatos);  
+                    	thUpdateStatusDB.setName("thSubUpdateStatus");
+                    	//thUpdateStatusDB.start();
+                    } 
+                } catch (Exception e) {
+                    mapThread.replace("thUpdateStatusDB", false);
+                    logger.error("Error al Iniciar Thread thUpdateStatusDB "+ thUpdateStatusDB.getName());
+                }
+                
             } else {
-                logger.warn("No es posble conectarse a MetaData...");
+                logger.warn("No es posble validar conexion a MetaData...");
             }
+            logger.info("Terminando MainTimerTask de srvMonitor...");
+        } catch (Exception e) {
+        	logger.error("Error inesperado en modulo principal srvMonitor: "+e.getMessage());
+        	}
         }
     }
 }

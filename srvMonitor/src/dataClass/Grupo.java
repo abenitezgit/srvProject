@@ -15,90 +15,59 @@ import java.util.List;
 public class Grupo {
     String grpID;
     String grpDESC;
-    String grpCLIID;
-    String grpHORID;
-    String grpUFechaExec;
-    String uStatus;
-    String status;
-    String numSecExec;
-    String lastNumSecExec;
-    
+    String cliID;
+    String cliDesc;
+    String horDesc;    
     List<Process> lstProcess = new ArrayList<>();
+    List<Dependence> lstDepend = new ArrayList<>();
 
     //Getter and Setter
-
-    
-    
-    public String getuStatus() {
-        return uStatus;
-    }
-
-    public String getNumSecExec() {
-		return numSecExec;
+	public List<Dependence> getLstDepend() {
+		return lstDepend;
 	}
 
-	public void setNumSecExec(String numSecExec) {
-		this.numSecExec = numSecExec;
+	public String getCliID() {
+		return cliID;
 	}
 
-	public String getLastNumSecExec() {
-		return lastNumSecExec;
+	public void setCliID(String cliID) {
+		this.cliID = cliID;
 	}
 
-	public void setLastNumSecExec(String lastNumSecExec) {
-		this.lastNumSecExec = lastNumSecExec;
+	public String getCliDesc() {
+		return cliDesc;
 	}
 
-	public void setuStatus(String uStatus) {
-        this.uStatus = uStatus;
-    }
-    
+	public void setCliDesc(String cliDesc) {
+		this.cliDesc = cliDesc;
+	}
+
+	public String getHorDesc() {
+		return horDesc;
+	}
+
+	public void setHorDesc(String horDesc) {
+		this.horDesc = horDesc;
+	}
+
+	public void setLstDepend(List<Dependence> lstDepend) {
+		this.lstDepend = lstDepend;
+	}
+
     public List<Process> getLstProcess() {
         return lstProcess;
     }
 
-    public void setLstProcess(List<Process> lstProcess) {
+    public synchronized void setLstProcess(List<Process> lstProcess) {
         this.lstProcess = lstProcess;
     }
 
-    public String getGrpUFechaExec() {
-        return grpUFechaExec;
-    }
-
-    public void setGrpUFechaExec(String grpUFechaExec) {
-        this.grpUFechaExec = grpUFechaExec;
-    }
-    
     public String getGrpDESC() {
         return grpDESC;
     }
 
     public void setGrpDESC(String grpDESC) {
         this.grpDESC = grpDESC;
-    }
-
-    public String getGrpCLIID() {
-        return grpCLIID;
-    }
-
-    public void setGrpCLIID(String grpCLIID) {
-        this.grpCLIID = grpCLIID;
-    }
-
-    public String getGrpHORID() {
-        return grpHORID;
-    }
-
-    public void setGrpHORID(String grpHORID) {
-        this.grpHORID = grpHORID;
-    }
-    
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
     }
 
     public String getGrpID() {

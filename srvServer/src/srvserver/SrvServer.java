@@ -145,13 +145,19 @@ public class SrvServer {
             /**
              * Solo ejecuta Thread de runProcess si hay asignados procesos al servicio
              */
-            if (gDatos.getServiceStatus().isIsAssignedTypeProc()) {
+            try {
+				logger.info("TypeProc Assigned: "+gSub.serializeObjectToJSon(gDatos.getMapAssignedTypeProc(), false));
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+            if (gDatos.getMapAssignedTypeProc().size()>0) {
                 //Levanta thRunProcess Monitorearo por los Subprocesos del TimerTask
                 //TimerTask: thSubRunProcess
                 //Al Agendar el Thread principal Muere y queda solo el Hijo.
                 try {
-                    if (!mapThread.get("thRunProcess")) {
-                        thRunProc.setName("thRunProcess");
+                    if (!mapThread.get("thSubRunProcess")) {
+                        thRunProc.setName("thSubRunProcess");
                         logger.info("Agendando thread RunProcess");
                         thRunProc.start();
                     } 

@@ -7,6 +7,8 @@ package dataClass;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  *
@@ -52,6 +54,7 @@ public class ETL {
     String LASTNUMSECEXEC;
     
     List<EtlMatch> lstEtlMatch = new ArrayList<>();
+    Map<String, Interval> mapInterval = new TreeMap<>();
     
     //Getter and Setter
     //
@@ -60,7 +63,15 @@ public class ETL {
         return LASTNUMSECEXEC;
     }
 
-    public void setLASTNUMSECEXEC(String LASTNUMSECEXEC) {
+	public Map<String, Interval> getMapInterval() {
+		return mapInterval;
+	}
+
+	public void setMapInterval(Map<String, Interval> mapInterval) {
+		this.mapInterval = mapInterval;
+	}
+
+	public void setLASTNUMSECEXEC(String LASTNUMSECEXEC) {
         this.LASTNUMSECEXEC = LASTNUMSECEXEC;
     }
 

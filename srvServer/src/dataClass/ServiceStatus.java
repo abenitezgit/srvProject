@@ -8,6 +8,8 @@ package dataClass;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  *
@@ -35,12 +37,16 @@ public class ServiceStatus {
     int srvEnable;
     int numThreadActives;
     int srvPort;
+    int maxTimeOffile;
     Socket skCliente;
     
     //Información Propia
     List<AssignedTypeProc> lstAssignedTypeProc = new ArrayList<>();
     List<ActiveTypeProc> lstActiveTypeProc = new ArrayList<>();
-    List<PoolProcess> lstPoolProcess = new ArrayList<>();
+    Map<String,TaskProcess> mapTask = new TreeMap<>();
+    Map<String, AssignedTypeProc> mapAssignedTypeProc = new TreeMap<>();
+    Map<String, Interval> mapInterval = new TreeMap<>();
+    
     
     //Getter and Setter
     //
@@ -49,7 +55,31 @@ public class ServiceStatus {
         return isLoadParam;
     }
 
-    public void setIsLoadParam(boolean isLoadParam) {
+    public Map<String, Interval> getMapInterval() {
+		return mapInterval;
+	}
+
+	public void setMapInterval(Map<String, Interval> mapInterval) {
+		this.mapInterval = mapInterval;
+	}
+
+	public Map<String, TaskProcess> getMapTask() {
+		return mapTask;
+	}
+
+	public void setMapTask(Map<String, TaskProcess> mapTask) {
+		this.mapTask = mapTask;
+	}
+
+	public Map<String, AssignedTypeProc> getMapAssignedTypeProc() {
+		return mapAssignedTypeProc;
+	}
+
+	public void setMapAssignedTypeProc(Map<String, AssignedTypeProc> mapAssignedTypeProc) {
+		this.mapAssignedTypeProc = mapAssignedTypeProc;
+	}
+
+	public void setIsLoadParam(boolean isLoadParam) {
         this.isLoadParam = isLoadParam;
     }
 
@@ -75,14 +105,6 @@ public class ServiceStatus {
 
     public void setSrvUpdateTime(String srvUpdateTime) {
         this.srvUpdateTime = srvUpdateTime;
-    }
-
-    public List<PoolProcess> getLstPoolProcess() {
-        return lstPoolProcess;
-    }
-
-    public void setLstPoolProcess(List<PoolProcess> lstPoolProcess) {
-        this.lstPoolProcess = lstPoolProcess;
     }
 
     public String getSrvHost() {

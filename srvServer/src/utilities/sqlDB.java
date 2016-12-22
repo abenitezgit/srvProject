@@ -21,11 +21,11 @@ public class sqlDB {
     static int FilasAfectadas;
     static int FilasConsultadas;
     
-    static String v_dbName;
-    static String v_hostIP;
-    static String v_dbPort;
-    static String v_dbUser;
-    static String v_dbPass;
+    String v_dbName;
+    String v_hostIP;
+    String v_dbPort;
+    String v_dbUser;
+    String v_dbPass;
     static boolean connStatus;
     static String connErrMesg;
     static int vLoginTimeout=2;
@@ -38,6 +38,13 @@ public class sqlDB {
     Dentro del método encerraremos la mayor parte del código dentro de un try-catch 
     con el fin de capturar las excepciones que se puedan originar tras la ejecución del mismo
     */
+    public sqlDB(String vHost, String dbName, String dbPort, String dbUser, String dbPass) {
+    	this.v_hostIP = vHost;
+    	this.v_dbName = dbName;
+    	this.v_dbPort = dbPort;
+    	this.v_dbUser = dbUser;
+    	this.v_dbPass = dbPass;
+    }
     
     public String getvSQLError() {
         return vSQLError;
@@ -157,7 +164,7 @@ public class sqlDB {
     cadena que contendrá la consulta SQL a ejecutar
     */
         
-    public boolean execute(String sql) {
+    public int execute(String sql) {
        try {
             Statement sentencia;
             sentencia = getConexion().createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
@@ -165,12 +172,12 @@ public class sqlDB {
             // En NumFilas se retorna el numero de filas afectadas
             getConexion().commit();
             sentencia.close();
+            return FilasAfectadas;
         } catch (SQLException e) {
             connErrMesg = "Error en Ejecucion de Sentencia";
             vSQLError = e.getMessage();
-            return false;
+            return 0;
         }        
-        return true;
     }
     
     public boolean executeSP(String sql) {

@@ -4,17 +4,24 @@
  * and open the template in the editor.
  */
 package srvmonitor;
-import java.io.DataInputStream;
+//import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import utilities.globalAreaData;
 import java.net.* ;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.TreeMap;
+
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
+
+import dataClass.ServiceStatus;
 import utilities.srvRutinas;
 
 /**
@@ -36,7 +43,7 @@ public class thKeepAliveServices extends Thread {
     @Override
     public void run() {
         Timer timerMain = new Timer("thSubKeep");
-        timerMain.schedule(new mainKeepTask(), 1000, 10000);
+        timerMain.schedule(new mainKeepTask(), 1000, gDatos.getServerInfo().getTxpKeep());
         logger.info("Se ha agendado thKeepAlive cada 10 segundos");
     }
     
@@ -48,26 +55,14 @@ public class thKeepAliveServices extends Thread {
 
         @Override
         public void run() {
-            /**
-             * Valida Conexion a MetaData
-             */
-            try {
-                MetaData metadata = new MetaData(gDatos);
-                if (gDatos.getServerStatus().isIsValMetadataConnect()) {
-                    metadata.closeConnection();
-                }
-            } catch (Exception e) {
-                logger.error("No se ha podido validar conexion a MetaData.."+e.getMessage());
-            }
-            
-            
+
+        try {
+        	logger.info("Inicia Thread thKeepAlive...");
             /*
                 Recupera los servicios registrados en lista "serviceStatus"
             */
             
-            JSONObject jData;
-            int numServices = gDatos.getLstServiceStatus().size();
-            logger.info("Inicia thKeepAlive...");
+            int numServices = gDatos.getMapServiceStatus().size();
             
             if (numServices>0) {
                 /*
@@ -76,28 +71,35 @@ public class thKeepAliveServices extends Thread {
                 */
                 int numServiceOnline = 0;
                 int numServiceOffline = 0;
-                for (int i=0; i<numServices; i++) {
-                    jData = new JSONObject(gDatos.getLstServiceStatus().get(i));
-                    String srvHost = jData.getString("srvHost");
-                    int srvPort = jData.getInt("srvPort");
+                
+                Map<String, ServiceStatus> vMapServiceStatus = new TreeMap<>(gDatos.getMapServiceStatus());
+                for (Map.Entry<String, ServiceStatus> entry : vMapServiceStatus.entrySet()) {
+                    String srvHost = entry.getValue().getSrvHost();
+                    int srvPort = entry.getValue().getSrvPort();
                     
                     Socket skCliente;
                     try {
                         skCliente = new Socket(srvHost, srvPort);
                 
                         OutputStream aux = skCliente.getOutputStream(); 
-                        DataOutputStream flujo= new DataOutputStream( aux ); 
+                        DataOutputStream flujo= new DataOutputStream( aux );
+                        ObjectOutputStream objOutput = new ObjectOutputStream(aux);
+                        
                         String dataSend = gSub.sendPing();
 
-                        logger.info("Generando (tx-ping) hacia Server Monitoreado: "+jData.getString("srvID"));
+                        logger.info("Generando (tx-ping) hacia Server : "+entry.getValue().getSrvID()+" Server: "+srvHost+" Port:"+srvPort);
 
-                        flujo.writeUTF( dataSend ); 
+                        objOutput.writeObject(dataSend);
+                        //flujo.writeUTF( dataSend ); 
 
                         InputStream inpStr = skCliente.getInputStream();
-                        DataInputStream dataInput = new DataInputStream(inpStr);
-                        String response = dataInput.readUTF();
+                        //DataInputStream dataInput = new DataInputStream(inpStr);
+                        ObjectInputStream objInput = new ObjectInputStream(inpStr);
+                        
+                        //String response = dataInput.readUTF();
+                        String response = (String) objInput.readObject();
 
-                        logger.info("Recibiendo (rx)...: "+response);
+                        logger.info("Recibiendo (rx-ping) desde Server: "+entry.getValue().getSrvID()+" resp: "+response);
                         JSONObject jHeader = new JSONObject(response);
                         
                         if (jHeader.getString("result").equals("OK")) {
@@ -110,27 +112,29 @@ public class thKeepAliveServices extends Thread {
                             }
                         }
                         
-                        logger.debug("srvOnline: "+numServiceOnline);
-                        logger.debug("srvOffline: "+numServiceOffline);
+                        logger.info("Servicios Monitoreados srvOnline: "+numServiceOnline);
+                        logger.info("Servicios Monitoreados srvOffline: "+numServiceOffline);
                         
                         flujo.close();
                         aux.close();
+                        objInput.close();
+                        objOutput.close();
                         skCliente.close();
                         
                     } catch (IOException e) {
                         numServiceOffline++;
                         gDatos.getServerStatus().setIsSocketServerActive(false);
-                        logger.error("Error conectando a socket servicio cliente..."+ e.getMessage());
+                        logger.error("Error conectando a socket servicio cliente...: "+entry.getValue().getSrvID()+" err: "+ e.getMessage());
                     };
-                    
-                    logger.debug("Servicio: "+jData.getString("srvID")+ " "+srvHost+" "+srvPort);
-                
                 }
             } else {
-                logger.warn("Aun no hay servicios registrados para monitorear...");
+                logger.warn("No hay servicios registrados para monitorear...");
             }
             
-            logger.info("Finaliza thKeepAlive...");
+            logger.info("Termino Thread thKeepAlive...");
+        } catch (Exception e) {
+    		logger.error("Error desconocido en Thread thKeepAlive: "+e.getMessage());
+        	}
         }
     }
 }

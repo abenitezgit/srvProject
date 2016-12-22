@@ -37,6 +37,9 @@ public class thKeepAlive extends Thread {
     
     @Override
     public void run() {
+    	logger.info("Iniciando thKeepAlive");
+    	logger.info("Status Active Monitor Host: "+gDatos.getServiceStatus().isIsActivePrimaryMonHost());
+    	
     	isPrimary = gDatos.getServiceStatus().isIsActivePrimaryMonHost();
     	if (isPrimary) {
     		srvHost = gDatos.getServiceInfo().getSrvMonHost();
@@ -52,16 +55,21 @@ public class thKeepAlive extends Thread {
             Socket skCliente = new Socket(srvHost, srvPort);
             
             OutputStream aux = skCliente.getOutputStream(); 
-            DataOutputStream flujo= new DataOutputStream( aux ); 
-            String dataSend = gSub.sendDataKeep("keep");
+            DataOutputStream flujo= new DataOutputStream( aux );
+            ObjectOutputStream objOutput = new ObjectOutputStream(aux);
+            String dataSend = gSub.sendStatusService();
             
             logger.info("Generando (tx) hacia Server Monitor "+ srvName + ": "+dataSend);
             
-            flujo.writeUTF( dataSend ); 
+            objOutput.writeObject(dataSend);
+            //flujo.writeUTF( dataSend ); 
             
             InputStream inpStr = skCliente.getInputStream();
             DataInputStream dataInput = new DataInputStream(inpStr);
-            String response = dataInput.readUTF();
+            ObjectInputStream objInput = new ObjectInputStream(inpStr);
+            
+            String response = (String) objInput.readObject();
+            //String response = dataInput.readUTF();
             
             logger.info("Recibiendo (rx)...: "+response);
             JSONObject jHeader = new JSONObject(response);
@@ -69,22 +77,25 @@ public class thKeepAlive extends Thread {
             try {
                 if (jHeader.getString("result").equals("OK")) {
                     JSONObject jData = jHeader.getJSONObject("data");
-                    logger.info("Enviando a actualizar lstAssignedTypeProc...");
-                    gSub.updateAssignedProcess(jData);
-                    logger.info("Enviando a actualizar lstPoolProcess...");
-                    gSub.updatePoolProcess(jData);
+                    logger.info("Actualiza statusService...");
+                    gSub.updateStatusService(jData);
                 } else {
                     if (jHeader.getString("result").equals("error")) {
                         JSONObject jData = jHeader.getJSONObject("data");
-                        System.out.println("Error result: "+jData.getInt("errCode")+ " " +jData.getString("errMesg"));
+                        logger.error("Error result: "+jData.getInt("errCode")+ " " +jData.getString("errMesg"));
                     }
                 }
                 gDatos.getServiceStatus().setIsConnectMonHost(true);
             } catch (JSONException e) {
                 logger.error("Error en formato de respuesta");
             }
+            aux.close();
+            flujo.close();
+            inpStr.close();
+            dataInput.close();
             skCliente.close();
-        } catch (NumberFormatException | IOException e) {
+            logger.info("Finalizando thKeepAlive");
+        } catch (NumberFormatException | IOException | ClassNotFoundException e) {
             gDatos.getServiceStatus().setIsActivePrimaryMonHost(!isPrimary);
             gDatos.getServiceStatus().setIsConnectMonHost(false);
             logger.error(" Error conexion a server de monitoreo "+ srvName + ": "+ e.getMessage());

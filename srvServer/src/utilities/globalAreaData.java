@@ -5,7 +5,8 @@
  */
 package utilities;
 
-import dataClass.PoolProcess;
+import dataClass.AssignedTypeProc;
+import dataClass.Interval;
 import dataClass.ServiceInfo;
 import dataClass.ServiceStatus;
 import dataClass.TaskProcess;
@@ -14,13 +15,11 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.BlockingQueue;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
@@ -42,14 +41,13 @@ public class globalAreaData {
     ServiceInfo serviceInfo = new ServiceInfo();
     ServiceStatus serviceStatus = new ServiceStatus();
     
-    private Map<String, TaskProcess> poolTask = new HashMap<String, TaskProcess>();
-    
-    
-    public BlockingQueue<PoolProcess> queueProcess   = new LinkedBlockingQueue<PoolProcess>(1024);
     public ExecutorService mainExecThread = Executors.newFixedThreadPool(10);
     public ExecutorService processExecThread;
     
-    public Map<String, PoolProcess> mapPoolProcess = new HashMap<String, PoolProcess>();
+    private Map<String, TaskProcess> mapTask = new TreeMap<String, TaskProcess>();
+    private Map<String, AssignedTypeProc> mapAssignedTypeProc = new TreeMap<>();
+    private Map<String, Object> mapActiveTypeProc = new TreeMap<>();
+    private Map<String, Interval> mapInteval = new TreeMap<>();
 
     /**
      * Getter And Setter Area
@@ -60,12 +58,52 @@ public class globalAreaData {
         return serviceInfo;
     }
 
-    public BlockingQueue<PoolProcess> getQueueProcess() {
-		return queueProcess;
+    public Map<String, Interval> getMapInteval() {
+		return mapInteval;
 	}
 
-	public void setQueueProcess(BlockingQueue<PoolProcess> queueProcess) {
-		this.queueProcess = queueProcess;
+	public void setMapInteval(Map<String, Interval> mapInteval) {
+		this.mapInteval = mapInteval;
+	}
+
+	public Map<String, Object> getMapActiveTypeProc() {
+		return mapActiveTypeProc;
+	}
+
+	public void setMapActiveTypeProc(Map<String, Object> mapActiveTypeProc) {
+		this.mapActiveTypeProc = mapActiveTypeProc;
+	}
+
+	public ExecutorService getMainExecThread() {
+		return mainExecThread;
+	}
+
+	public void setMainExecThread(ExecutorService mainExecThread) {
+		this.mainExecThread = mainExecThread;
+	}
+
+	public ExecutorService getProcessExecThread() {
+		return processExecThread;
+	}
+
+	public void setProcessExecThread(ExecutorService processExecThread) {
+		this.processExecThread = processExecThread;
+	}
+
+	public Map<String, AssignedTypeProc> getMapAssignedTypeProc() {
+		return mapAssignedTypeProc;
+	}
+
+	public void setMapAssignedTypeProc(Map<String, AssignedTypeProc> mapAssignedTypeProc) {
+		this.mapAssignedTypeProc = mapAssignedTypeProc;
+	}
+
+	public Map<String, TaskProcess> getMapTask() {
+		return mapTask;
+	}
+
+	public void setMapTask(Map<String, TaskProcess> mapTask) {
+		this.mapTask = mapTask;
 	}
 
 	public synchronized void setServiceInfo(ServiceInfo serviceInfo) {
@@ -99,79 +137,79 @@ public class globalAreaData {
             return formatter.format(today);
     }
     
-    public synchronized void updateStatusPoolProcess(String typeProc, String procID, String status, String intervalID) {
-        try {
-            int indexPool;
-            if (typeProc.equals("ETL")) {
-                indexPool = gDatos.getIndexOfPoolProcess(procID, intervalID);
-            } else {
-                indexPool = gDatos.getIndexOfPoolProcess(procID);
-            }
-
-            PoolProcess pool = new PoolProcess();
-            
-            pool = gDatos.serviceStatus.getLstPoolProcess().get(indexPool);
-            pool.setUpdateTime(getFechaNow());
-            pool.setStatus(status);
-            
-            gDatos.serviceStatus.getLstPoolProcess().set(indexPool, pool);
-        
-        } catch (Exception e) {
-            logger.error("Error updateStatusPoolProcess: "+e.getMessage());
-        }
-    }
+//    public synchronized void updateStatusPoolProcess(String typeProc, String procID, String status, String intervalID) {
+//        try {
+//            int indexPool;
+//            if (typeProc.equals("ETL")) {
+//                indexPool = gDatos.getIndexOfPoolProcess(procID, intervalID);
+//            } else {
+//                indexPool = gDatos.getIndexOfPoolProcess(procID);
+//            }
+//
+//            PoolProcess pool = new PoolProcess();
+//            
+//            pool = gDatos.serviceStatus.getLstPoolProcess().get(indexPool);
+//            pool.setUpdateTime(getFechaNow());
+//            pool.setStatus(status);
+//            
+//            gDatos.serviceStatus.getLstPoolProcess().set(indexPool, pool);
+//        
+//        } catch (Exception e) {
+//            logger.error("Error updateStatusPoolProcess: "+e.getMessage());
+//        }
+//    }
     
-    public synchronized void updateLstPoolProcess(int index, PoolProcess pool, boolean updateActive) {
-        /**
-         * Actualiza lista de poolProcess asociada a Objeto serviceStatus
-         * El index informado es el indice de la posicion del objeto en la lista interna del objeto serviceStatus
-         */
-        try {
-            if (index==-1) {
-                serviceStatus.getLstPoolProcess().add(pool);
-            } else { 
-                if (updateActive) {
-                    serviceStatus.getLstPoolProcess().set(index, pool);
-                }
-            }
-        } catch (Exception e) {
-            logger.error("Error updating LstPoolProcess del serviceStatus..."+e.getMessage());
-        }
-    }
+//    public synchronized void updateLstPoolProcess(int index, PoolProcess pool, boolean updateActive) {
+//        /**
+//         * Actualiza lista de poolProcess asociada a Objeto serviceStatus
+//         * El index informado es el indice de la posicion del objeto en la lista interna del objeto serviceStatus
+//         */
+//        try {
+//            if (index==-1) {
+//                serviceStatus.getLstPoolProcess().add(pool);
+//            } else { 
+//                if (updateActive) {
+//                    serviceStatus.getLstPoolProcess().set(index, pool);
+//                }
+//            }
+//        } catch (Exception e) {
+//            logger.error("Error updating LstPoolProcess del serviceStatus..."+e.getMessage());
+//        }
+//    }
     
-    public int getIndexOfPoolProcess(String procID) {
-        int index=-1;
-        try {
-            if (!serviceStatus.getLstPoolProcess().isEmpty()) {
-                for (int i=0; i<serviceStatus.getLstPoolProcess().size(); i++) {
-                    if (serviceStatus.getLstPoolProcess().get(i).getProcID().equals(procID)) {
-                        index = i;
-                        break;
-                    }
-                }
-            }
-            return index;
-        } catch (Exception e) {
-            return -1;
-        }
-    }
+//    public int getIndexOfPoolProcess(String procID) {
+//        int index=-1;
+//        try {
+//            if (!serviceStatus.getLstPoolProcess().isEmpty()) {
+//                for (int i=0; i<serviceStatus.getLstPoolProcess().size(); i++) {
+//                    if (serviceStatus.getLstPoolProcess().get(i).getProcID().equals(procID)) {
+//                        index = i;
+//                        break;
+//                    }
+//                }
+//            }
+//            return index;
+//        } catch (Exception e) {
+//            return -1;
+//        }
+//    }
 
-    public int getIndexOfPoolProcess(String procID, String intervalID) {
-        int index=-1;
-        try {
-            if (!serviceStatus.getLstPoolProcess().isEmpty()) {
-                for (int i=0; i<serviceStatus.getLstPoolProcess().size(); i++) {
-                    if (serviceStatus.getLstPoolProcess().get(i).getProcID().equals(procID)&&serviceStatus.getLstPoolProcess().get(i).getIntervalID().equals(intervalID)) {
-                        index = i;
-                        break;
-                    }
-                }
-            }
-            return index;
-        } catch (Exception e) {
-            return -1;
-        }
-    }
+//    public int getIndexOfPoolProcess(String procID, String intervalID) {
+//        int index=-1;
+//        try {
+//            if (!serviceStatus.getLstPoolProcess().isEmpty()) {
+//                for (int i=0; i<serviceStatus.getLstPoolProcess().size(); i++) {
+//                    if (serviceStatus.getLstPoolProcess().get(i).getProcID().equals(procID)&&serviceStatus.getLstPoolProcess().get(i).getIntervalID().equals(intervalID)) {
+//                        index = i;
+//                        break;
+//                    }
+//                }
+//            }
+//            return index;
+//        } catch (Exception e) {
+//            return -1;
+//        }
+//    }
     
 //    public synchronized void setStatusFinished(PoolProcess poolProcess) {
 //        try {
@@ -222,98 +260,67 @@ public class globalAreaData {
         }
     }    
 
-    public synchronized void setFinishedPoolProcess(PoolProcess poolProcess, String uStatus) {
-        try {
-            //PoolProcess newPoolProcess = poolProcess;
-            String typeProc = poolProcess.getTypeProc();
-            String procID = poolProcess.getProcID();
-            
-            if (!typeProc.equals("ETL")) {
-                boolean isFound=false;
-                int numItems = serviceStatus.getLstPoolProcess().size();
-                for (int i=0; i<numItems; i++) {
-                    if (    serviceStatus.getLstPoolProcess().get(i).getTypeProc().equals(typeProc)
-                            &&serviceStatus.getLstPoolProcess().get(i).getProcID().equals(procID)
-                            &&serviceStatus.getLstPoolProcess().get(i).getStatus().equals("Running")
-                        ) {
-                        isFound=true;
-                        serviceStatus.getLstPoolProcess().get(i).setStatus("Finished");
-                        serviceStatus.getLstPoolProcess().get(i).setuStatus(uStatus);
-                        serviceStatus.getLstPoolProcess().get(i).setUpdateTime(getDateNow());
-                        serviceStatus.getLstPoolProcess().get(i).setEndTime(getDateNow());
-                        break;
-                    }
-                }
-                if (!isFound) {
-                    logger.warn("El proceso: "+typeProc+":"+procID+" no pudo ser actualizado a Finished");
-                }
-            } else {
-                boolean isFound=false;
-                int numItems = serviceStatus.getLstPoolProcess().size();
-                for (int i=0; i<numItems; i++) {
-                    if (    serviceStatus.getLstPoolProcess().get(i).getTypeProc().equals(typeProc)
-                            &&serviceStatus.getLstPoolProcess().get(i).getIntervalID().equals(poolProcess.getIntervalID())
-                        ) {
-                        isFound=true;
-                        serviceStatus.getLstPoolProcess().get(i).setStatus("Finished");
-                        serviceStatus.getLstPoolProcess().get(i).setuStatus(uStatus);
-                        serviceStatus.getLstPoolProcess().get(i).setUpdateTime(getDateNow());
-                        serviceStatus.getLstPoolProcess().get(i).setEndTime(getDateNow());
-                        break;
-                    }
-                }
-                if (!isFound) {
-                    logger.warn("El proceso: "+typeProc+":"+poolProcess.getIntervalID()+" no pudo ser actualizado a Finished");
-                }
-            }
-        } catch (Exception e) {
-            logger.error("Error en setFinishedPoolProcess: "+e.getMessage());
-        }
+//    public synchronized void setFinishedPoolProcess(PoolProcess poolProcess, String uStatus) {
+//        try {
+//            //PoolProcess newPoolProcess = poolProcess;
+//            String typeProc = poolProcess.getTypeProc();
+//            String procID = poolProcess.getProcID();
+//            
+//            if (!typeProc.equals("ETL")) {
+//                boolean isFound=false;
+//                int numItems = serviceStatus.getLstPoolProcess().size();
+//                for (int i=0; i<numItems; i++) {
+//                    if (    serviceStatus.getLstPoolProcess().get(i).getTypeProc().equals(typeProc)
+//                            &&serviceStatus.getLstPoolProcess().get(i).getProcID().equals(procID)
+//                            &&serviceStatus.getLstPoolProcess().get(i).getStatus().equals("Running")
+//                        ) {
+//                        isFound=true;
+//                        serviceStatus.getLstPoolProcess().get(i).setStatus("Finished");
+//                        serviceStatus.getLstPoolProcess().get(i).setuStatus(uStatus);
+//                        serviceStatus.getLstPoolProcess().get(i).setUpdateTime(getDateNow());
+//                        serviceStatus.getLstPoolProcess().get(i).setEndTime(getDateNow());
+//                        break;
+//                    }
+//                }
+//                if (!isFound) {
+//                    logger.warn("El proceso: "+typeProc+":"+procID+" no pudo ser actualizado a Finished");
+//                }
+//            } else {
+//                boolean isFound=false;
+//                int numItems = serviceStatus.getLstPoolProcess().size();
+//                for (int i=0; i<numItems; i++) {
+//                    if (    serviceStatus.getLstPoolProcess().get(i).getTypeProc().equals(typeProc)
+//                            &&serviceStatus.getLstPoolProcess().get(i).getIntervalID().equals(poolProcess.getIntervalID())
+//                        ) {
+//                        isFound=true;
+//                        serviceStatus.getLstPoolProcess().get(i).setStatus("Finished");
+//                        serviceStatus.getLstPoolProcess().get(i).setuStatus(uStatus);
+//                        serviceStatus.getLstPoolProcess().get(i).setUpdateTime(getDateNow());
+//                        serviceStatus.getLstPoolProcess().get(i).setEndTime(getDateNow());
+//                        break;
+//                    }
+//                }
+//                if (!isFound) {
+//                    logger.warn("El proceso: "+typeProc+":"+poolProcess.getIntervalID()+" no pudo ser actualizado a Finished");
+//                }
+//            }
+//        } catch (Exception e) {
+//            logger.error("Error en setFinishedPoolProcess: "+e.getMessage());
+//        }
+//    
+//    }
     
-    }
-    
-    public synchronized void setRunningPoolProcess(PoolProcess poolProcess) {
+    public synchronized void setRunningTaskProcess(String keyTaskProcess) {
         try {
-            //PoolProcess newPoolProcess = poolProcess;
-            String typeProc = poolProcess.getTypeProc();
-            String procID = poolProcess.getProcID();
-            
-            if (!typeProc.equals("ETL")) {
-                boolean isFound=false;
-                int numItems = serviceStatus.getLstPoolProcess().size();
-                for (int i=0; i<numItems; i++) {
-                    if (    serviceStatus.getLstPoolProcess().get(i).getTypeProc().equals(typeProc)
-                            &&serviceStatus.getLstPoolProcess().get(i).getProcID().equals(procID)
-                            &&serviceStatus.getLstPoolProcess().get(i).getStatus().equals("Ready")
-                        ) {
-                        isFound=true;
-                        serviceStatus.getLstPoolProcess().get(i).setStatus("Running");
-                        serviceStatus.getLstPoolProcess().get(i).setUpdateTime(getDateNow());
-                        break;
-                    }
-                }
-                if (!isFound) {
-                    logger.warn("El proceso: "+typeProc+":"+procID+" no pudo ser actualizado a Running");
-                }
-            } else {
-                boolean isFound=false;
-                int numItems = serviceStatus.getLstPoolProcess().size();
-                for (int i=0; i<numItems; i++) {
-                    if (    serviceStatus.getLstPoolProcess().get(i).getTypeProc().equals(typeProc)
-                            &&serviceStatus.getLstPoolProcess().get(i).getIntervalID().equals(poolProcess.getIntervalID())
-                        ) {
-                        isFound=true;
-                        serviceStatus.getLstPoolProcess().get(i).setStatus("Running");
-                        serviceStatus.getLstPoolProcess().get(i).setUpdateTime(getDateNow());
-                        break;
-                    }
-                }
-                if (!isFound) {
-                    logger.warn("El proceso: "+typeProc+":"+poolProcess.getIntervalID()+" no pudo ser actualizado a Running");
-                }
-            }
+        	TaskProcess taskProcess = new TaskProcess();
+        	taskProcess = gDatos.getMapTask().get(keyTaskProcess);
+        	
+        	if (gDatos.getMapTask().get(keyTaskProcess).getStatus().equals("Assigned")) {
+        		taskProcess.setStatus("Running");
+        		gDatos.getMapTask().replace(keyTaskProcess, taskProcess);
+        	}
         } catch (Exception e) {
-            logger.error("Error en setRunningPoolProcess: "+e.getMessage());
+            logger.error("Error en setRunningTaskProcess: "+e.getMessage());
         }
     
     }
@@ -420,7 +427,11 @@ public class globalAreaData {
                 //
                 
                 //fileConf.load(new FileInputStream("/Users/andresbenitez/Documents/Apps/NetBeansProjects3/srvServer/src/utilities/srvServer.properties"));
-                fileConf.load(new FileInputStream("srvServer.properties"));
+                String propertiesPath = this.getClass().getClassLoader().getResource("utilities").getPath();
+                String propertiesName = "srvServer.properties";
+                String filePath = propertiesPath + propertiesName;
+
+                fileConf.load(new FileInputStream(propertiesName));
 
                 serviceInfo.setSrvID(fileConf.getProperty("srvID"));
                 serviceInfo.setTxpMain(Integer.valueOf(fileConf.getProperty("txpMain")));

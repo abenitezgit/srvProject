@@ -11,32 +11,82 @@ package dataClass;
  * @author andresbenitez
  */
 public class Interval {
-    String ETLID;
     String intervalID;
     String status;
-    String fechaIns;
-    String fechaUpdate;
-    int numExec;
-    
-    ETL etlConf;
-    
+    String uStatus;
+    String fecIns;
+    String fecUpdate;
+    String fecIni;
+    String fecFin;
+    int rowsRead;
+    int rowsLoad;
+    int intentos;
+        
     //Getter and Setter
+    
+    public String getuStatus() {
+		return uStatus;
+	}
 
-    public ETL getEtlConf() {
-        return etlConf;
-    }
+	public int getIntentos() {
+		return intentos;
+	}
 
-    public void setEtlConf(ETL etlConf) {
-        this.etlConf = etlConf;
-    }
+	public void setIntentos(int intentos) {
+		this.intentos = intentos;
+	}
 
-    public String getETLID() {
-        return ETLID;
-    }
+	public String getFecIni() {
+		return fecIni;
+	}
 
-    public void setETLID(String ETLID) {
-        this.ETLID = ETLID;
-    }
+	public void setFecIni(String fecIni) {
+		this.fecIni = fecIni;
+	}
+
+	public String getFecFin() {
+		return fecFin;
+	}
+
+	public void setFecFin(String fecFin) {
+		this.fecFin = fecFin;
+	}
+
+	public void setuStatus(String uStatus) {
+		this.uStatus = uStatus;
+	}
+
+	public String getFecIns() {
+		return fecIns;
+	}
+
+	public void setFecIns(String fecIns) {
+		this.fecIns = fecIns;
+	}
+
+	public String getFecUpdate() {
+		return fecUpdate;
+	}
+
+	public void setFecUpdate(String fecUpdate) {
+		this.fecUpdate = fecUpdate;
+	}
+
+	public int getRowsRead() {
+		return rowsRead;
+	}
+
+	public void setRowsRead(int rowsRead) {
+		this.rowsRead = rowsRead;
+	}
+
+	public int getRowsLoad() {
+		return rowsLoad;
+	}
+
+	public void setRowsLoad(int rowsLoad) {
+		this.rowsLoad = rowsLoad;
+	}
 
     public String getIntervalID() {
         return intervalID;
@@ -54,27 +104,4 @@ public class Interval {
         this.status = status;
     }
 
-    public String getFechaIns() {
-        return fechaIns;
-    }
-
-    public void setFechaIns(String fechaIns) {
-        this.fechaIns = fechaIns;
-    }
-
-    public String getFechaUpdate() {
-        return fechaUpdate;
-    }
-
-    public void setFechaUpdate(String fechaUpdate) {
-        this.fechaUpdate = fechaUpdate;
-    }
-
-    public int getNumExec() {
-        return numExec;
-    }
-
-    public void setNumExec(int numExec) {
-        this.numExec = numExec;
-    }
 }

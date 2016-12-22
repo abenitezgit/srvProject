@@ -46,13 +46,15 @@ public class thServerSocket extends Thread {
                 Socket skCliente = skServidor.accept();
                 InputStream inpStr = skCliente.getInputStream();
                 DataInputStream dataInput = new DataInputStream( inpStr );
+                ObjectInputStream objInput = new ObjectInputStream(inpStr);
                 
                 //Recibe Data Input (request)
                 //
                 //Espera Entrada
                 //
                 try {
-                    inputData  = dataInput.readUTF();
+                    //inputData  = dataInput.readUTF();
+                	inputData = (String) objInput.readObject();
                     //gSub.sysOutln(inputData);
                     
                     logger.info("Recibiendo TX: "+ inputData);
@@ -66,7 +68,7 @@ public class thServerSocket extends Thread {
 
                         switch (dRequest) {
                             case "getStatus":
-                                outputData = gSub.sendDataKeep("request");
+                                outputData = gSub.sendStatusService();
                                 break;
                             case "getDate":
                                 outputData = gSub.sendDate();
@@ -100,16 +102,16 @@ public class thServerSocket extends Thread {
                             case "ping":
                                 outputData = gSub.sendOkTX();
                                 break;
-                            case "updatePoolProcesss":
-                                outputData = gSub.updatePoolProcess(jData);
-                                break;
+//                            case "updatePoolProcesss":
+//                                outputData = gSub.updatePoolProcess(jData);
+//                                break;
                             default:
                                 outputData = gSub.sendError(99,"Error desconocido..");
                         }
                     } else {
                         outputData = gSub.sendError(60);
                     }
-                } catch (IOException | JSONException e) {
+                } catch (IOException | JSONException | ClassNotFoundException e) {
                     outputData = gSub.sendError(90);
                 }
 
@@ -117,20 +119,26 @@ public class thServerSocket extends Thread {
                 //Envia Respuesta
                 //
                 OutputStream outStr = skCliente.getOutputStream();
-                DataOutputStream dataOutput = new DataOutputStream(outStr);
+                //DataOutputStream dataOutput = new DataOutputStream(outStr);
+                ObjectOutputStream objOutput = new ObjectOutputStream(outStr);
                 
-                logger.info("Enviando respuesta: "+ outputData);
+                //logger.info("Enviando respuesta: "+ outputData);
+                logger.info("Enviando respuesta: "+ objOutput);
                 
                 if (outputData==null) {
-                    dataOutput.writeUTF("{}");
+                    //dataOutput.writeUTF("{}");
+                    objOutput.writeObject("{}");
                 } else {
-                    dataOutput.writeUTF(outputData);
+                    //dataOutput.writeUTF(outputData);
+                    objOutput.writeObject(outputData);
                 }
                 
                 //Cierra Todas las conexiones
                 //
                 inpStr.close();
                 dataInput.close();
+                objOutput.close();
+                objInput.close();
                 skCliente.close();
             }
             skServidor.close();

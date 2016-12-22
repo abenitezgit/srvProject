@@ -5,11 +5,12 @@
  */
 package utilities;
 
+import dataClass.ActiveTypeProc;
 import dataClass.Agenda;
+import dataClass.AssignedTypeProc;
 import dataClass.ETL;
 import dataClass.Grupo;
 import dataClass.Interval;
-import dataClass.PoolProcess;
 import dataClass.ServerStatus;
 import dataClass.ServerInfo;
 import dataClass.ServiceStatus;
@@ -20,10 +21,10 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import org.apache.log4j.Logger;
 
@@ -36,27 +37,72 @@ public class globalAreaData {
     Logger logger = Logger.getLogger("globalAreaData");
     
     //Referencia Data Class
+    
     private ServerInfo serverInfo = new ServerInfo();
     private ServerStatus serverStatus = new ServerStatus();
-    private List<ServiceStatus> lstServiceStatus = new ArrayList<>();
+    
     private List<Agenda> lstShowAgendas = new ArrayList<>();
     private List<Agenda> lstActiveAgendas = new ArrayList<>();
-    private List<Grupo> lstActiveGrupos = new ArrayList<>();
     private List<ETL> lstETLConf = new ArrayList<>();
-    private List<Interval> lstInterval = new ArrayList<>();
-    private List<PoolProcess> lstPoolProcess = new ArrayList<>();
-    private Map<String,TaskProcess> mapTask = new HashMap<>();
+    
+    private Map<String, TaskProcess> mapTask = new TreeMap<>();
+    private Map<String, ServiceStatus> mapServiceStatus = new TreeMap<>();
+    private Map<String, AssignedTypeProc> mapAssignedTypeProc = new TreeMap<>();
+    private Map<String, ActiveTypeProc> mapActiveTypeProc = new TreeMap<>();
+    private Map<String, Grupo> mapGrupo = new TreeMap<>();
+    private Map<String, Interval> mapInterval = new TreeMap<>();
 
     /**
      * Declaraciones de Getter ans Setter
      * @return 
      */
     
+    
     public ServerInfo getServerInfo() {
         return serverInfo;
     }
 
-    public synchronized Map<String, TaskProcess> getMapTask() {
+    public Map<String, Interval> getMapInterval() {
+		return mapInterval;
+	}
+
+	public void setMapInterval(Map<String, Interval> mapInterval) {
+		this.mapInterval = mapInterval;
+	}
+
+	public Map<String, Grupo> getMapGrupo() {
+		return mapGrupo;
+	}
+
+	public void setMapGrupo(Map<String, Grupo> mapGrupo) {
+		this.mapGrupo = mapGrupo;
+	}
+
+	public Map<String, ActiveTypeProc> getMapActiveTypeProc() {
+		return mapActiveTypeProc;
+	}
+
+	public void setMapActiveTypeProc(Map<String, ActiveTypeProc> mapActiveTypeProc) {
+		this.mapActiveTypeProc = mapActiveTypeProc;
+	}
+
+	public Map<String, AssignedTypeProc> getMapAssignedTypeProc() {
+		return mapAssignedTypeProc;
+	}
+
+	public void setMapAssignedTypeProc(Map<String, AssignedTypeProc> mapAssignedTypeProc) {
+		this.mapAssignedTypeProc = mapAssignedTypeProc;
+	}
+
+	public Map<String, ServiceStatus> getMapServiceStatus() {
+		return mapServiceStatus;
+	}
+
+	public void setMapServiceStatus(Map<String, ServiceStatus> mapServiceStatus) {
+		this.mapServiceStatus = mapServiceStatus;
+	}
+
+	public synchronized Map<String, TaskProcess> getMapTask() {
 		return mapTask;
 	}
 
@@ -76,14 +122,6 @@ public class globalAreaData {
         this.serverStatus = serverStatus;
     }
 
-    public List<ServiceStatus> getLstServiceStatus() {
-        return lstServiceStatus;
-    }
-
-    public void setLstServiceStatus(List<ServiceStatus> lstServiceStatus) {
-        this.lstServiceStatus = lstServiceStatus;
-    }
-
     public List<Agenda> getLstShowAgendas() {
         return lstShowAgendas;
     }
@@ -100,14 +138,6 @@ public class globalAreaData {
         this.lstActiveAgendas = lstActiveAgendas;
     }
 
-    public synchronized List<Grupo> getLstActiveGrupos() {
-        return lstActiveGrupos;
-    }
-
-    public synchronized void setLstActiveGrupos(List<Grupo> lstActiveGrupos) {
-        this.lstActiveGrupos = lstActiveGrupos;
-    }
-
     public List<ETL> getLstETLConf() {
         return lstETLConf;
     }
@@ -116,68 +146,89 @@ public class globalAreaData {
         this.lstETLConf = lstETLConf;
     }
 
-    public List<Interval> getLstInterval() {
-        return lstInterval;
-    }
-
-    public void setLstInterval(List<Interval> lstInterval) {
-        this.lstInterval = lstInterval;
-    }
-
-    public List<PoolProcess> getLstPoolProcess() {
-        return lstPoolProcess;
-    }
-
-    public void setLstPoolProcess(List<PoolProcess> lstPoolProcess) {
-        this.lstPoolProcess = lstPoolProcess;
-    }
-    
     /**
      * Metodos Personalizados
      * @param pool 
      */
-    public synchronized void addMapTask(Grupo grupo) {
-    	String mapID = grupo.getGrpID()+"|"+grupo.getNumSecExec();
-    	//getMapTask().put(mapID, grupo);
+    public void updateStatusMapTask(String keyMapTask, String status) {
+    	try {
+    		getMapTask().get(keyMapTask).setStatus(status);
+    		getMapTask().get(keyMapTask).setUpdateTime(getDateNow());
+    	} catch (Exception e) {
+    		logger.error("Error en updateStatusMapTask...: "+e.getMessage());
+    	}
+    	
     }
     
-    public synchronized void inscribePoolProcess(PoolProcess pool) {
-        try {
-            if (lstPoolProcess.isEmpty()) {
-                lstPoolProcess.add(pool);
-                logger.info("Se agregó nuevo process: "+pool.getGrpID()+" "+pool.getProcID()+" "+pool.getIntervalID());
-            } else {
-                if (pool.getTypeProc().equals("ETL")) {
-                    if (lstPoolProcess
-                            .stream()
-                            .filter(p -> p.getProcID().equals(pool.getProcID())&&p.getIntervalID()
-                            .equals(pool.getIntervalID()))
-                            .collect(Collectors.toList()).isEmpty()) {
-                        lstPoolProcess.add(pool);
-                    }
-                } else {
-                    if (lstPoolProcess
-                            .stream()
-                            .filter(p -> p.getProcID().equals(pool.getProcID()))
-                            .collect(Collectors.toList()).isEmpty()) {
-                        lstPoolProcess.add(pool);
-                        logger.info("Se agregó nuevo process: "+pool.getGrpID()+" "+pool.getProcID()+" "+pool.getIntervalID());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            logger.error("Error en inscribePoolProcess..."+e.getMessage());
-        }
+    public synchronized void updateMapGrupo(Grupo grupo) throws Exception {
+    	//Actualiza la lista global de MapGrupos a partir de un Map
+		if (!getMapGrupo().containsKey(grupo.getGrpID())) {
+			getMapGrupo().put(grupo.getGrpID(), grupo);
+		}
+    	
     }
     
-    public synchronized void updateLstPoolProcessInterval(PoolProcess pool) {
-        List<PoolProcess> tmp = lstPoolProcess.stream().filter(p -> p.getProcID().equals(pool.getProcID())&&p.getIntervalID().equals(pool.getIntervalID())).collect(Collectors.toList());
-        
-        if (tmp.isEmpty()) {
-            lstPoolProcess.add(pool);
-        }        
+    public synchronized void updateMapGroup(Map<String, Grupo> vMapGrupo) throws Exception {
+		//Actualiza la lista global de MapGrupos a partir de un Map
+    	
+    	for (Map.Entry<String, Grupo> entry : vMapGrupo.entrySet()) {
+    		if (!getMapGrupo().containsKey(entry.getKey())) {
+    			getMapGrupo().put(entry.getKey(), entry.getValue());
+    		}
+    	}
     }
-
+    
+    public synchronized void updateMapIntervalFromMD(Map<String, Interval> vMapInterval) {
+    	/**
+    	 * Actualiza las lista generica de MapInterval con la lista recuperada
+    	 * desde metadata
+    	 */
+    	Interval interval;
+    	if (vMapInterval.size()>0) {
+    		for (Map.Entry<String, Interval> entry : vMapInterval.entrySet()) {
+    			interval = new Interval();
+    			interval = entry.getValue();
+    					
+    			if (getMapInterval().containsKey(entry.getKey())) {
+    				//Si existe valida si cambia su estado en algunos casos
+    				if (entry.getValue().getStatus().equals("Ready")) {
+    					//Si viene un Ready valida que no este en ejecucion el global
+    					if (!getMapInterval().get(entry.getKey()).getStatus().equals("Running")) {
+    						//Actualiza el global con estado Ready
+    						getMapInterval().get(entry.getKey()).setStatus("Ready");
+    						getMapInterval().get(entry.getKey()).setFecUpdate(getDateNow());
+    					}
+    				}
+    				
+    			} else {
+    				//Si no existe lo ingresa al map global
+    				getMapInterval().put(entry.getKey(), entry.getValue());
+    			}
+    		}
+    	}
+    }
+    
+    
+    public synchronized void addMapTask(String key, TaskProcess taskProcess) {
+    	try {
+    		mapTask.put(key, taskProcess);
+    	} catch (Exception e) {
+    		logger.error("Error en addMapTask para key: "+key+" err: "+e.getMessage());
+    	}
+    }
+    
+    public synchronized void replaceMapTask(String key, TaskProcess taskProcess) {
+    	try {
+    		if (mapTask.containsKey(key)) {
+    			mapTask.replace(key, taskProcess);
+    		} else {
+    			logger.error("Error en replaceMapTask para key: "+key+" err: key no existe");
+    		}
+    	} catch (Exception e) {
+    		logger.error("Error en replaceMapTask para key: "+key+" err: "+e.getMessage());
+    	}
+    }
+    
     public int getIndexOfETLConf(String procID) {
         int index=-1;
         try {
@@ -195,17 +246,17 @@ public class globalAreaData {
         }
     }
     
-    public synchronized void updateLstInterval(Interval interval) {
-    
-        List<Interval> lstTemp1 = this.lstInterval.stream().filter(p -> p.getETLID().equals(interval.getETLID())).collect(Collectors.toList());
-        List<Interval> lstTemp2 = lstTemp1.stream().filter(p -> p.getIntervalID().equals(interval.getIntervalID())).collect(Collectors.toList());
-        
-        int numIntervals = lstTemp2.size();
-        
-        if (numIntervals==0) {
-            lstInterval.add(interval);
-        }
-    }
+//    public synchronized void updateLstInterval(Interval interval) {
+//    
+//        List<Interval> lstTemp1 = this.lstInterval.stream().filter(p -> p.getETLID().equals(interval.getETLID())).collect(Collectors.toList());
+//        List<Interval> lstTemp2 = lstTemp1.stream().filter(p -> p.getIntervalID().equals(interval.getIntervalID())).collect(Collectors.toList());
+//        
+//        int numIntervals = lstTemp2.size();
+//        
+//        if (numIntervals==0) {
+//            lstInterval.add(interval);
+//        }
+//    }
     
     public synchronized void updateLstEtlConf(ETL etl) {
         try {
@@ -229,48 +280,87 @@ public class globalAreaData {
         }
     }
     
-    public synchronized void updateStatusLstActiveGrupos(int posArray, String status) { 
-    	Grupo group = new Grupo();
-    	group = lstActiveGrupos.get(posArray);
-    	group.setStatus(status);
-    	lstActiveGrupos.set(posArray, group);
-    }
+//    public synchronized void updateStatusLstActiveGrupos(int posArray, Grupo group) {
+//    	switch (group.getStatus()) {
+//    		case "Pending":
+//    			if (lstActiveGrupos.get(posArray).getStatus().equals("Sleeping")) {
+//    				lstActiveGrupos.set(posArray, group);
+//    			}
+//    			break;
+//    		case "Assigned":
+//    			if (lstActiveGrupos.get(posArray).getStatus().equals("Pending")) {
+//    				lstActiveGrupos.set(posArray, group);
+//    			}
+//    			break;
+//    	}
+//    	
+//    }
 
-    public synchronized void updateLstActiveGrupos(Grupo grupo) {
-        
-        List<Grupo> lstTempGrupos = this.lstActiveGrupos.stream().filter(p -> p.getGrpID().equals(grupo.getGrpID())).collect(Collectors.toList());
-        
-        int numTempGrupos = lstTempGrupos.size();
-        boolean isSecFound = false;
-        
-        for (int i=0; i<numTempGrupos; i++) {
-            if (lstTempGrupos.get(i).getNumSecExec().equals(grupo.getNumSecExec())) {
-                isSecFound = true;
-            }
-        }
-        
-        if (!isSecFound) {
-            this.lstActiveGrupos.add(grupo);
+//    public synchronized void updateLstActiveGrupos(Grupo grupo) {
+//        
+//        List<Grupo> lstTempGrupos = this.lstActiveGrupos.stream().filter(p -> p.getGrpID().equals(grupo.getGrpID())).collect(Collectors.toList());
+//        
+//        int numTempGrupos = lstTempGrupos.size();
+//        boolean isSecFound = false;
+//        
+//        for (int i=0; i<numTempGrupos; i++) {
+//            if (lstTempGrupos.get(i).getNumSecExec().equals(grupo.getNumSecExec())) {
+//                isSecFound = true;
+//            }
+//        }
+//        
+//        if (!isSecFound) {
+//            this.lstActiveGrupos.add(grupo);
+//        }
+//    }
+
+//    public void updateLstServiceStatus(ServiceStatus serviceStatus) {
+//        int numItems = lstServiceStatus.size();
+//        boolean itemFound = false;
+//        ServiceStatus myServiceStatus;
+//        
+//        for (int i=0; i<numItems; i++) {
+//            if (lstServiceStatus.get(i).getSrvID().equals(serviceStatus.getSrvID())) {
+//               myServiceStatus = lstServiceStatus.get(i);
+//               myServiceStatus.setSrvEnable(serviceStatus.getSrvEnable());
+//               myServiceStatus.setLstAssignedTypeProc(serviceStatus.getLstAssignedTypeProc());
+//               lstServiceStatus.set(i, myServiceStatus);
+//               itemFound = true;
+//            }
+//        }
+//        
+//        if (!itemFound) {
+//            lstServiceStatus.add(serviceStatus);
+//        }
+//    }
+    
+    public String getDateNow() {
+        try {
+            //Extrae Fecha de Hoy
+            //
+            Date today;
+            SimpleDateFormat formatter;
+            formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            System.out.println(formatter.getTimeZone());
+            today = new Date();
+            return formatter.format(today);  
+        } catch (Exception e) {
+            return null;
         }
     }
-
-    public void updateLstServiceStatus(ServiceStatus serviceStatus) {
-        int numItems = lstServiceStatus.size();
-        boolean itemFound = false;
-        ServiceStatus myServiceStatus;
-        
-        for (int i=0; i<numItems; i++) {
-            if (lstServiceStatus.get(i).getSrvID().equals(serviceStatus.getSrvID())) {
-               myServiceStatus = lstServiceStatus.get(i);
-               myServiceStatus.setSrvEnable(serviceStatus.getSrvEnable());
-               myServiceStatus.setLstAssignedTypeProc(serviceStatus.getLstAssignedTypeProc());
-               lstServiceStatus.set(i, myServiceStatus);
-               itemFound = true;
-            }
-        }
-        
-        if (!itemFound) {
-            lstServiceStatus.add(serviceStatus);
+    
+    public String getDateNow(String xformat) {
+        try {
+            //Extrae Fecha de Hoy
+            //
+            Date today;
+            SimpleDateFormat formatter;
+            formatter = new SimpleDateFormat(xformat);
+            System.out.println(formatter.getTimeZone());
+            today = new Date();
+            return formatter.format(today);  
+        } catch (Exception e) {
+            return null;
         }
     }
     
@@ -289,7 +379,11 @@ public class globalAreaData {
         	/**
         	 * Lee archivo de properties
         	 */
-            fileConf.load(new FileInputStream("/Users/andresbenitez/Documents/Developer/EclipseProjects/ABT/srvMonitor/src/utilities/srvMonitor.properties"));
+            String propertiesPath = this.getClass().getClassLoader().getResource("utilities").getPath();
+            String propertiesName = "srvMonitor.properties";
+            String filePath = propertiesPath + propertiesName;
+
+            fileConf.load(new FileInputStream(propertiesName));
 
             /**
              * Recupera Valores de Operacion del Servicio

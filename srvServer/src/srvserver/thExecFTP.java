@@ -6,7 +6,8 @@
 package srvserver;
 
 import dataClass.Ftp;
-import dataClass.PoolProcess;
+import dataClass.TaskProcess;
+
 import java.util.Map;
 import org.apache.log4j.Logger;
 import utilities.globalAreaData;
@@ -18,16 +19,14 @@ import org.apache.commons.net.ftp.FTPClient;
  * @author andresbenitez
  */
 public class thExecFTP extends Thread{
-    PoolProcess pool = new PoolProcess();
     myFtpClass ftp = new myFtpClass();
     static srvRutinas gSub;
     static globalAreaData gDatos;
     static Logger logger = Logger.getLogger("thExecFTP");
     
-    public thExecFTP(globalAreaData m, PoolProcess pool) {
+    public thExecFTP(globalAreaData m, TaskProcess taskProcess) {
         gDatos = m;
         gSub = new srvRutinas(gDatos);
-        this.pool = pool;
         
     }
     
@@ -37,10 +36,6 @@ public class thExecFTP extends Thread{
         
         try {
                 
-            if (ftp.isValidParam(pool.getParams())) {
-
-
-            }
         
             logger.info("Finalizando Proceso FTP Exitoso");
         } catch (Exception e) {

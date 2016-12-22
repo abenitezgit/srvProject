@@ -5,7 +5,8 @@
  */
 package srvserver;
 
-import dataClass.PoolProcess;
+import dataClass.TaskProcess;
+
 import java.util.logging.Level;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
@@ -17,19 +18,18 @@ import utilities.srvRutinas;
  * @author andresbenitez
  */
 public class thExecOSP extends Thread{
-    PoolProcess poolProcess = new PoolProcess();
     static srvRutinas gSub;
     static globalAreaData gDatos;
     JSONObject params = new JSONObject();
     private String procID = null;
+    TaskProcess taskProcess = new TaskProcess();
     Logger logger = Logger.getLogger("thExecOSP");
     
-    public thExecOSP(globalAreaData m, PoolProcess poolProcess) {
+    public thExecOSP(globalAreaData m, TaskProcess taskProcess) {
         gDatos = m;
         gSub = new srvRutinas(gDatos);
-        this.poolProcess = poolProcess;
+        this.taskProcess = taskProcess;
         //this.params = poolProcess.getParams();
-        this.procID = poolProcess.getProcID();
     }
     
     @Override
@@ -41,8 +41,11 @@ public class thExecOSP extends Thread{
         } catch (InterruptedException ex) {
             java.util.logging.Logger.getLogger(thExecOSP.class.getName()).log(Level.SEVERE, null, ex);
         }
-                
+
+        taskProcess.setEndTime(gSub.getDateNow());
+        taskProcess.setStatus("Finished");
         
+        gDatos.getMapTask().put(taskProcess.getProcID()+":"+taskProcess.getNumSecExec(), taskProcess);
         //gDatos.setStatusFinished(poolProcess);
     
     }
