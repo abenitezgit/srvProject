@@ -386,6 +386,19 @@ public class MetaData {
     	
     	return vSQL;
     }
+    
+    public String getSqlFindFTP(String procID) {
+    	switch (gDatos.getServerInfo().getDbType()) {
+	    	case "ORA":
+	            return "";
+	    	case "SQL":
+	    		return "";
+	    	case "mySQL":
+	    		return "select ";
+			default:
+				return null;
+    	}
+    }
 
     
     public String getSqlFindETL(String procID) {

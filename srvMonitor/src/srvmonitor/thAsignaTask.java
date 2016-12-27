@@ -35,7 +35,7 @@ public class thAsignaTask extends Thread{
     @Override
     public void run() {
         Timer timerMain = new Timer("thSubAsignaTask");
-        timerMain.schedule(new mainTask(), 10000, 20000);
+        timerMain.schedule(new mainTask(), 10000, gDatos.getServerInfo().getTxpAsigna());
         
     }
     

@@ -15,8 +15,8 @@ public class ServerInfo {
     int txpMain;
     int txpKeep;
     int txpSocket;
-    int txpAgendas;
-    int txpETL;
+    int txpInscribe;
+    int txpAsigna;
     int srvPort;
     int ageShowHour;
     int ageGapMinute;
@@ -48,7 +48,23 @@ public class ServerInfo {
         return ageShowHour;
     }
 
-    public String getDbType() {
+    public int getTxpInscribe() {
+		return txpInscribe;
+	}
+
+	public void setTxpInscribe(int txpInscribe) {
+		this.txpInscribe = txpInscribe;
+	}
+
+	public int getTxpAsigna() {
+		return txpAsigna;
+	}
+
+	public void setTxpAsigna(int txpAsigna) {
+		this.txpAsigna = txpAsigna;
+	}
+
+	public String getDbType() {
 		return dbType;
 	}
 
@@ -138,22 +154,6 @@ public class ServerInfo {
 
     public void setTxpSocket(int txpSocket) {
         this.txpSocket = txpSocket;
-    }
-
-    public int getTxpAgendas() {
-        return txpAgendas;
-    }
-
-    public void setTxpAgendas(int txpAgendas) {
-        this.txpAgendas = txpAgendas;
-    }
-
-    public int getTxpETL() {
-        return txpETL;
-    }
-
-    public void setTxpETL(int txpETL) {
-        this.txpETL = txpETL;
     }
 
     public int getTxpMain() {

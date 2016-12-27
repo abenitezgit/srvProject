@@ -10,150 +10,107 @@ package dataClass;
  * @author andresbenitez
  */
 public class Ftp {
-    String ID;
-    String Desc;
-    String SourceServerID;
-    String SourceUserID;
-    String SourcePassID;
-    String SourcePath;
-    String SourceFile;
-    boolean SourceIsPattern;
-    boolean SourceIsFtp;
-    String DestServerID;
-    String DestUserID;
-    String DestPassID;
-    String DestPath;
-    String DestFile;
-    boolean DestIsPattern;
-    boolean DestIsFtp;
+    String ftpID;
+    String ftpDesc;
+    String srvSourceID;
+    String srvDestID;
+    String patternFind;
+    int usePatternFind;
+    String fileSourceName;
+    String fileDestName;
+    String userSourceID;
+    String userDestID;
+    String pathSource;
+    String pathDest;
+    String ftpType;
+    int ftpEnable;
     
     //Getter and Setter
+    
+	public String getFtpID() {
+		return ftpID;
+	}
+	public void setFtpID(String ftpID) {
+		this.ftpID = ftpID;
+	}
+	public String getFtpDesc() {
+		return ftpDesc;
+	}
+	public void setFtpDesc(String ftpDesc) {
+		this.ftpDesc = ftpDesc;
+	}
+	public String getSrvSourceID() {
+		return srvSourceID;
+	}
+	public void setSrvSourceID(String srvSourceID) {
+		this.srvSourceID = srvSourceID;
+	}
+	public String getSrvDestID() {
+		return srvDestID;
+	}
+	public void setSrvDestID(String srvDestID) {
+		this.srvDestID = srvDestID;
+	}
+	public String getPatternFind() {
+		return patternFind;
+	}
+	public void setPatternFind(String patternFind) {
+		this.patternFind = patternFind;
+	}
+	public int getUsePatternFind() {
+		return usePatternFind;
+	}
+	public void setUsePatternFind(int usePatternFind) {
+		this.usePatternFind = usePatternFind;
+	}
+	public String getFileSourceName() {
+		return fileSourceName;
+	}
+	public void setFileSourceName(String fileSourceName) {
+		this.fileSourceName = fileSourceName;
+	}
+	public String getFileDestName() {
+		return fileDestName;
+	}
+	public void setFileDestName(String fileDestName) {
+		this.fileDestName = fileDestName;
+	}
+	public String getUserSourceID() {
+		return userSourceID;
+	}
+	public void setUserSourceID(String userSourceID) {
+		this.userSourceID = userSourceID;
+	}
+	public String getUserDestID() {
+		return userDestID;
+	}
+	public void setUserDestID(String userDestID) {
+		this.userDestID = userDestID;
+	}
+	public String getPathSource() {
+		return pathSource;
+	}
+	public void setPathSource(String pathSource) {
+		this.pathSource = pathSource;
+	}
+	public String getPathDest() {
+		return pathDest;
+	}
+	public void setPathDest(String pathDest) {
+		this.pathDest = pathDest;
+	}
+	public String getFtpType() {
+		return ftpType;
+	}
+	public void setFtpType(String ftpType) {
+		this.ftpType = ftpType;
+	}
+	public int getFtpEnable() {
+		return ftpEnable;
+	}
+	public void setFtpEnable(int ftpEnable) {
+		this.ftpEnable = ftpEnable;
+	}
 
-    public String getID() {
-        return ID;
-    }
-
-    public void setID(String ID) {
-        this.ID = ID;
-    }
-
-    public String getDesc() {
-        return Desc;
-    }
-
-    public void setDesc(String Desc) {
-        this.Desc = Desc;
-    }
-
-    public String getSourceServerID() {
-        return SourceServerID;
-    }
-
-    public void setSourceServerID(String SourceServerID) {
-        this.SourceServerID = SourceServerID;
-    }
-
-    public String getSourceUserID() {
-        return SourceUserID;
-    }
-
-    public void setSourceUserID(String SourceUserID) {
-        this.SourceUserID = SourceUserID;
-    }
-
-    public String getSourcePassID() {
-        return SourcePassID;
-    }
-
-    public void setSourcePassID(String SourcePassID) {
-        this.SourcePassID = SourcePassID;
-    }
-
-    public String getSourcePath() {
-        return SourcePath;
-    }
-
-    public void setSourcePath(String SourcePath) {
-        this.SourcePath = SourcePath;
-    }
-
-    public String getSourceFile() {
-        return SourceFile;
-    }
-
-    public void setSourceFile(String SourceFile) {
-        this.SourceFile = SourceFile;
-    }
-
-    public boolean isSourceIsPattern() {
-        return SourceIsPattern;
-    }
-
-    public void setSourceIsPattern(boolean SourceIsPattern) {
-        this.SourceIsPattern = SourceIsPattern;
-    }
-
-    public boolean isSourceIsFtp() {
-        return SourceIsFtp;
-    }
-
-    public void setSourceIsFtp(boolean SourceIsFtp) {
-        this.SourceIsFtp = SourceIsFtp;
-    }
-
-    public String getDestServerID() {
-        return DestServerID;
-    }
-
-    public void setDestServerID(String DestServerID) {
-        this.DestServerID = DestServerID;
-    }
-
-    public String getDestUserID() {
-        return DestUserID;
-    }
-
-    public void setDestUserID(String DestUserID) {
-        this.DestUserID = DestUserID;
-    }
-
-    public String getDestPassID() {
-        return DestPassID;
-    }
-
-    public void setDestPassID(String DestPassID) {
-        this.DestPassID = DestPassID;
-    }
-
-    public String getDestPath() {
-        return DestPath;
-    }
-
-    public void setDestPath(String DestPath) {
-        this.DestPath = DestPath;
-    }
-
-    public String getDestFile() {
-        return DestFile;
-    }
-
-    public void setDestFile(String DestFile) {
-        this.DestFile = DestFile;
-    }
-
-    public boolean isDestIsPattern() {
-        return DestIsPattern;
-    }
-
-    public void setDestIsPattern(boolean DestIsPattern) {
-        this.DestIsPattern = DestIsPattern;
-    }
-
-    public boolean isDestIsFtp() {
-        return DestIsFtp;
-    }
-
-    public void setDestIsFtp(boolean DestIsFtp) {
-        this.DestIsFtp = DestIsFtp;
-    }
+    
 }

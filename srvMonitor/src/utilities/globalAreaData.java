@@ -379,9 +379,9 @@ public class globalAreaData {
         	/**
         	 * Lee archivo de properties
         	 */
-            String propertiesPath = this.getClass().getClassLoader().getResource("utilities").getPath();
+            //String propertiesPath = this.getClass().getClassLoader().getResource("utilities").getPath();
             String propertiesName = "srvMonitor.properties";
-            String filePath = propertiesPath + propertiesName;
+            //String filePath = propertiesPath + propertiesName;
 
             fileConf.load(new FileInputStream(propertiesName));
 
@@ -390,10 +390,10 @@ public class globalAreaData {
              */
             serverInfo.setSrvID(fileConf.getProperty("srvID"));
             serverInfo.setTxpMain(Integer.valueOf(fileConf.getProperty("txpMain")));
-            serverInfo.setTxpAgendas(Integer.valueOf(fileConf.getProperty("txpAgendas")));
-            serverInfo.setTxpETL(Integer.valueOf(fileConf.getProperty("txpETL")));
             serverInfo.setTxpKeep(Integer.valueOf(fileConf.getProperty("txpKeep")));
             serverInfo.setTxpSocket(Integer.valueOf(fileConf.getProperty("txpSocket")));
+            serverInfo.setTxpInscribe(Integer.valueOf(fileConf.getProperty("txpInscribe")));
+            serverInfo.setTxpAsigna(Integer.valueOf(fileConf.getProperty("txpAsigna")));
             serverInfo.setSrvPort(Integer.valueOf(fileConf.getProperty("srvPort")));
             serverInfo.setAgeShowHour(Integer.valueOf(fileConf.getProperty("ageShowHour")));
             serverInfo.setAgeGapMinute(Integer.valueOf(fileConf.getProperty("ageGapMinute")));

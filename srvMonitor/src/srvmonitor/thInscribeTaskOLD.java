@@ -9,15 +9,17 @@ import dataClass.Agenda;
 import dataClass.Dependence;
 import dataClass.ETL;
 import dataClass.EtlMatch;
-import dataClass.Ftp;
 import dataClass.Grupo;
+import dataClass.Interval;
 import dataClass.Process;
 import dataClass.TaskProcess;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +36,7 @@ import utilities.srvRutinas;
  *
  * @author andresbenitez
  */
-public class thInscribeTask extends Thread{
+public class thInscribeTaskOLD extends Thread{
     static srvRutinas gSub;
     static globalAreaData gDatos;
     static MetaData metadata;
@@ -42,7 +44,7 @@ public class thInscribeTask extends Thread{
 //Carga Clase log4
     static Logger logger = Logger.getLogger("thInscribeTask");   
     
-    public thInscribeTask(globalAreaData m) {
+    public thInscribeTaskOLD(globalAreaData m) {
         try {
             gDatos = m;
             gSub = new srvRutinas(gDatos);
@@ -55,8 +57,8 @@ public class thInscribeTask extends Thread{
     @Override
     public void run() {
         Timer timerMain = new Timer("thSubInscribeTask");
-        timerMain.schedule(new mainTask(), 10000, gDatos.getServerInfo().getTxpInscribe());
-        logger.info("Se ha agendado thSubInscribeTask cada "+ gDatos.getServerInfo().getTxpInscribe() + " segundos");
+        timerMain.schedule(new mainTask(), 10000, 20000);
+        logger.info("Se ha agendado thSubInscribeTask cada 20 segundos");
     }
     
     
@@ -555,10 +557,6 @@ public class thInscribeTask extends Thread{
                         logger.info("Buscando programacion de ETL "+ process.getProcID() + " en MetaData.");
                         param = findETLDetail(process);
                         break;
-                    case "FTP":
-                    	logger.info("Buscando programacion de FTP "+ process.getProcID() + " en MetaData.");
-                    	param = findFtpDetail(process);
-                    	break;
                     default:
                     	logger.error("No existe definicion para tipo de proceso");
                     	param = null;
@@ -603,28 +601,225 @@ public class thInscribeTask extends Thread{
 	    	}
 	    } //end ETL findEtlDetail()
 	    
-	    private Ftp findFtpDetail(Process process) {
+	    private Map<String, Interval> genNewIntervals(Process process) {
 	    	try {
-            	Ftp ftp = new Ftp();
-                
-                //Recupera parametros globales del FTP
-            	logger.info("Recuperando parmatros globales del FTP "+process.getProcID());
-                vSQL = metadata.getSqlFindFTP(process.getProcID());
-                
-                ResultSet rsFtp = (ResultSet) metadata.getQuery(vSQL);
-                if (rsFtp!=null) {
-                	ftp = getParseFtpParam(rsFtp);
-                }
-                
-	    		return ftp;
+	    		//Objeto local de MapInterval
+	    		Map<String, Interval> vMapInterval = new TreeMap<>();
 	    		
+	    		//Extrae objeto ETL
+	    		ETL etl = new ETL();
+	    		etl = (ETL) process.getParams();
+	    		
+		        //Extre Fecha Actual
+		        Date today;
+		        Date fecGap;
+		        Date fecIni;
+		        Date fecItera;
+		        Date fecIntervalIni;
+		        Date fecIntervalFin;
+		
+		        int MinItera;
+		        int HoraItera;
+		        int DiaItera;
+		        int MesItera;
+		        int AnoItera;
+		
+		        long numInterval;
+		        String localIntervalID;
+		        String todayChar;
+
+
+		        //Setea Fecha Actual
+		        //
+		        today = new Date();
+		        
+		        //Variables del Objeto ETL
+		        //
+		        int vTimeGap = etl.getTIMEGAP();
+		        int vTimePeriod = etl.getTIMEPERIOD();
+		        int vTimeGen = etl.getTIMEGEN();
+		        String vUnitMeasure = etl.getUNITMEASURE();
+		        String vETLID = etl.getETLID();
+	            
+		        //Setea Fecha GAP - Desface de tiempo en extraccion
+		        //
+		        Calendar c = Calendar.getInstance();
+		        c.add(Calendar.MINUTE, -(vTimeGap+vTimePeriod));
+		        fecGap = c.getTime();
+
+		        //Setea Fecha Inicio Inscripcion/Revision de Intervalos
+		        //
+		
+		        c.setTime(today);
+		        c.add(Calendar.MINUTE, -vTimeGen);
+		        fecIni = c.getTime();
+
+		        logger.info("Datos del ETLID: "+vETLID);
+		        logger.info("Fecha Actual: "+ today);
+		        logger.info("Fecha GAP   : "+ fecGap);
+		        logger.info("Fecha IniIns: "+ fecIni);
+	        
+		        fecItera = fecIni;
+		        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+		        SimpleDateFormat sdfToday = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		        String IntervalIni;
+		        String IntervalFin;
+		        Interval interval;
+		        String keyMap;
+	        
+		        while (fecItera.compareTo(fecGap) < 0) {
+		            //Crea Objecto Interval
+		            //
+		            interval = new Interval();
+		
+		            //Extrae Intervalo para Fecha fecItera
+		            //
+		            c.setTime(fecItera);
+		            AnoItera = c.get(Calendar.YEAR);
+		            MesItera = c.get(Calendar.MONTH);
+		            DiaItera = c.get(Calendar.DAY_OF_MONTH);
+		            HoraItera = c.get(Calendar.HOUR_OF_DAY);
+		            MinItera = c.get(Calendar.MINUTE);
+		
+		            //Valida si el intervalo de extraccion (cETL_INTERVALUNIDAD) es por:
+		            //  Minutos     : 0
+		            //  Horas       : 1
+		            //  Dias        : 2
+		            //  Semanas     : 3
+		            //  Mensuales   : 4
+		            //  Anuales     : 5
+		
+		            switch (vUnitMeasure) {
+		                case "MINUTE":
+		                    fecIntervalIni = null;
+		                    fecIntervalFin = null;
+		                    numInterval = 60/vTimePeriod;
+		                    for (int i=1;i<=numInterval;i++) {
+		                        c.set(AnoItera, MesItera, DiaItera, HoraItera, (i)*vTimePeriod,0);
+		                        fecIntervalFin = c.getTime();
+		                        if (fecIntervalFin.compareTo(fecItera) >0 ) {
+		                            c.set(AnoItera, MesItera, DiaItera, HoraItera, (i-1)*vTimePeriod,0);
+		                            fecIntervalIni = c.getTime();
+		                            break;
+		                        }
+		                    }
+		                    c.setTime(fecItera);
+		                    c.add(Calendar.MINUTE, vTimePeriod);
+		                    fecItera = c.getTime();
+		
+		
+		                    IntervalIni = sdf.format(fecIntervalIni);
+		                    IntervalFin = sdf.format(fecIntervalFin);
+		                    localIntervalID = IntervalIni+'-'+IntervalFin;
+		
+		                    interval.setIntervalID(localIntervalID);
+		                    interval.setStatus("Ready");
+		                    interval.setFecIns(sdfToday.format(today));
+		                    interval.setFecUpdate(sdfToday.format(today));
+		                    interval.setFecIni(IntervalIni);
+		                    interval.setFecFin(IntervalFin);
+		
+		                    keyMap = interval.getIntervalID();
+		                    if (!vMapInterval.containsKey(keyMap)) {
+		                    	vMapInterval.put(keyMap, interval);
+		                    	logger.info("Se inscribió intrevalID: "+keyMap);
+		                    }
+		
+		                    break;
+		
+		                    case "HOUR":
+		                        fecIntervalIni = null;
+		                        fecIntervalFin = null;
+		                        numInterval = 24/vTimePeriod;
+		                        for (int i=1;i<=numInterval;i++) {
+		                            c.set(AnoItera, MesItera, DiaItera, (i)*vTimePeriod, 0, 0);
+		                            fecIntervalFin = c.getTime();
+		                            if (fecIntervalFin.compareTo(fecItera) >0 ) {
+		                                c.set(AnoItera, MesItera, DiaItera, (i-1)*vTimePeriod, 0, 0);
+		                                fecIntervalIni = c.getTime();
+		                                break;
+		                            }
+		                        }
+		                        c.setTime(fecItera);
+		                        c.add(Calendar.HOUR_OF_DAY, vTimePeriod);
+		                        fecItera = c.getTime();
+		
+		                        IntervalIni = sdf.format(fecIntervalIni);
+		                        IntervalFin = sdf.format(fecIntervalFin);
+		                        localIntervalID = IntervalIni+'-'+IntervalFin;                    
+		
+		                        interval.setIntervalID(localIntervalID);
+		                        interval.setStatus("Ready");
+		                        interval.setFecIns(sdfToday.format(today));
+		                        interval.setFecUpdate(sdfToday.format(today));
+		                        interval.setFecIni(IntervalIni);
+		                        interval.setFecFin(IntervalFin);
+		
+			                    keyMap = interval.getIntervalID();
+			                    if (!vMapInterval.containsKey(keyMap)) {
+			                    	vMapInterval.put(keyMap, interval);
+			                    	logger.info("Se inscribió intrevalID: "+keyMap);
+			                    }
+		
+		                        break;
+		
+		                    case "2":
+		                    case "3":
+		                    case "4":
+		                    case "5":
+		                    default:
+		                } //end switch
+		            } //end while
+		        return vMapInterval;
 	    	} catch (Exception e) {
-	    		logger.error("Error en findFtpDetail: "+e.getMessage());
+	    		logger.error("Error generando intervalos faltantes..."+e.getMessage());
 	    		return null;
 	    	}
-	    } //end FTP findFtpDetail()
+	    }
 
-	    	    
+	    
+	    private Map<String, Interval> getParseEtlInterval(Process process, ResultSet rs) throws Exception {
+
+	    	Interval interval;
+	    	Map<String, Interval> mapInterval = new TreeMap<>();
+	    	
+            while (rs.next()) {
+            	interval = new Interval();
+            	
+                if (rs.getString("INTERVALID")!=null) {
+                    interval.setIntervalID(rs.getString("INTERVALID"));
+                }
+                if (rs.getString("FECINS")!=null) {
+                    interval.setFecIns(rs.getString("FECINS"));
+                }
+                if (rs.getString("FECUPDATE")!=null) {
+                    interval.setFecUpdate(rs.getString("FECUPDATE"));
+                }
+                if (rs.getString("STATUS")!=null) {
+                    interval.setStatus(rs.getString("STATUS"));
+                }
+                if (rs.getString("USTATUS")!=null) {
+                    interval.setStatus(rs.getString("USTATUS"));
+                }
+                interval.setRowsLoad(rs.getInt("ROWSLOAD"));
+                interval.setRowsRead(rs.getInt("ROWSREAD"));
+                interval.setIntentos(rs.getInt("INTENTOS"));
+                if (rs.getString("FECINI")!=null) {
+                    interval.setFecIni(rs.getString("FECINI"));
+                }
+                if (rs.getString("FECFIN")!=null) {
+                    interval.setFecFin(rs.getString("FECFIN"));
+                }
+                
+                //Genera MapInterval con key: ETLID + INTERVALID
+                String mapKey = process.getProcID()+":"+interval.getIntervalID();
+                mapInterval.put(mapKey, interval);
+            }
+            logger.info("Se recuperaron "+mapInterval.size()+ " intervalos pendientes desde Metadata");
+            
+	    	return mapInterval;
+	    }
+	    
 	    private List<EtlMatch> getParseEtlMatch(ResultSet rs) throws Exception{
 	    	EtlMatch etlMatch;
 	    	List<EtlMatch> lstEtlMatch = new ArrayList<>();
@@ -657,55 +852,6 @@ public class thInscribeTask extends Thread{
             }
 	    	
 	    	return lstEtlMatch;
-	    }
-	    
-	    private Ftp getParseFtpParam(ResultSet rs) throws Exception {
-	    	Ftp ftp = new Ftp();
-	    	if (rs.next()) {
-	    		if (rs.getString("FTPID")!=null) {
-	    			ftp.setFtpID(rs.getString("FTPID"));
-	    		}
-	    		if (rs.getString("FTPDESC")!=null) {
-	    			ftp.setFtpDesc(rs.getString("FTPDESC"));
-	    		}
-	    		if (rs.getString("srvSourceID")!=null) {
-	    			ftp.setSrvSourceID(rs.getString("srvSourceID"));
-	    		}
-	    		if (rs.getString("srvDestID")!=null) {
-	    			ftp.setSrvDestID(rs.getString("srvDestID"));
-	    		}
-	    		if (rs.getString("patternFind")!=null) {
-	    			ftp.setPatternFind(rs.getString("patternFind"));
-	    		}
-	    		if (rs.getString("usePatternFind")!=null) {
-	    			ftp.setUsePatternFind(rs.getInt("usePatternFind"));
-	    		}
-	    		if (rs.getString("fileSourceName")!=null) {
-	    			ftp.setFileSourceName(rs.getString("fileSourceName"));
-	    		}
-	    		if (rs.getString("fileDestName")!=null) {
-	    			ftp.setFileDestName(rs.getString("fileDestName"));
-	    		}
-	    		if (rs.getString("userSourceID")!=null) {
-	    			ftp.setUserSourceID(rs.getString("userSourceID"));
-	    		}
-	    		if (rs.getString("userDestID")!=null) {
-	    			ftp.setUserDestID(rs.getString("userDestID"));
-	    		}
-	    		if (rs.getString("pathSource")!=null) {
-	    			ftp.setPathSource(rs.getString("pathSource"));
-	    		}
-	    		if (rs.getString("pathDest")!=null) {
-	    			ftp.setPathDest(rs.getString("pathDest"));
-	    		}
-	    		if (rs.getString("ftpType")!=null) {
-	    			ftp.setFtpType(rs.getString("ftpType"));
-	    		}
-	    		if (rs.getString("ftpEnable")!=null) {
-	    			ftp.setFtpEnable(rs.getInt("ftpEnable"));
-	    		}
-	    	}
-	    	return ftp;
 	    }
     
     	private ETL getParseEtlParam(ResultSet rs) throws Exception {
