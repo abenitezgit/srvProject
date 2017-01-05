@@ -45,7 +45,7 @@ public class ServiceStatus {
     List<ActiveTypeProc> lstActiveTypeProc = new ArrayList<>();
     Map<String,TaskProcess> mapTask = new TreeMap<>();
     Map<String, AssignedTypeProc> mapAssignedTypeProc = new TreeMap<>();
-    Map<String, Interval> mapInterval = new TreeMap<>();
+    //Map<String, Interval> mapInterval = new TreeMap<>();
     
     
     //Getter and Setter
@@ -55,14 +55,14 @@ public class ServiceStatus {
         return isLoadParam;
     }
 
-    public Map<String, Interval> getMapInterval() {
-		return mapInterval;
-	}
-
-	public void setMapInterval(Map<String, Interval> mapInterval) {
-		this.mapInterval = mapInterval;
-	}
-
+//    public Map<String, Interval> getMapInterval() {
+//		return mapInterval;
+//	}
+//
+//	public void setMapInterval(Map<String, Interval> mapInterval) {
+//		this.mapInterval = mapInterval;
+//	}
+//
 	public Map<String, TaskProcess> getMapTask() {
 		return mapTask;
 	}

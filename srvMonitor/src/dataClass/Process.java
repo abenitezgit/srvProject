@@ -14,6 +14,7 @@ public class Process {
     int nOrder;
     int critical;
     String type;
+    String numSecExec;
     
     Object params = new Object();
     
@@ -21,6 +22,14 @@ public class Process {
 
     public Object getParams() {
 		return params;
+	}
+
+	public String getNumSecExec() {
+		return numSecExec;
+	}
+
+	public void setNumSecExec(String numSecExec) {
+		this.numSecExec = numSecExec;
 	}
 
 	public String getType() {

@@ -35,8 +35,6 @@ public class TaskProcess {
      * @return 
      */
     
-    
-
     public String getGrpID() {
         return grpID;
     }

@@ -5,7 +5,9 @@
  */
 package srvmonitor;
 
+import java.util.List;
 import java.sql.ResultSet;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -13,6 +15,8 @@ import java.util.TreeMap;
 
 import org.apache.log4j.Logger;
 
+import dataClass.Dependence;
+import dataClass.Grupo;
 import dataClass.TaskProcess;
 import utilities.globalAreaData;
 import utilities.srvRutinas;
@@ -65,8 +69,8 @@ public class thAsignaTask extends Thread{
 	            /*
 	             * Valida Servicios Registrados para realizar asignacion de procesos
 	             */
-            
-	            if (gDatos.getMapServiceStatus().size()>0) {
+	            if (true) {
+	            //if (gDatos.getMapServiceStatus().size()>0) {
 	            	
 	            	logger.info("Se encontraron "+gDatos.getMapServiceStatus().size()+ " servicios registrados");
 	            	
@@ -84,11 +88,13 @@ public class thAsignaTask extends Thread{
 		        			 /*
 		        			  * Analiza por status de TaskProcess para determinar la accion a realizar
 		        			  */
+        					 logger.info("Analizando Task: "+entry.getKey()+ " status: "+entry.getValue().getStatus());
 		        			 switch (entry.getValue().getStatus()) {
 		            			 case "Pending":
-		            				 if (isFactActivarTask(entry.getValue())) {
+		            				 if (isFinishedDependences(entry.getValue())) {
 		            					 gDatos.updateStatusMapTask(entry.getKey(), "Ready");
 		            					 updateStatusReadyGrupoExec(entry.getValue());
+		            					 logger.info("Se Asigno Task: "+entry.getKey());
 		            				 }
 		            				 break;
 		        				 default:
@@ -110,9 +116,40 @@ public class thAsignaTask extends Thread{
 	    	}
         } //fin run()
         
-        
-	    private boolean isFactActivarTask(TaskProcess taskProcess) {
-	    	return true;
+	    private boolean isFinishedDependences(TaskProcess task) {
+	    	try {
+	    		boolean isFree=true;
+	    		Dependence dependence;
+	    		List<Dependence> lstDependences = new ArrayList<>();
+	    		lstDependences = gDatos.getMapGrupo().get(task.getGrpID()).getLstDepend();
+	    		for (int i=0; i<lstDependences.size(); i++) {
+	    			dependence = new Dependence();
+	    			dependence = lstDependences.get(i);
+	    			
+	    			if (dependence.getProcHijo().equals(task.getProcID())) {
+	    				if (dependence.getCritical()==0) {
+	    					isFree = isFree&&true;
+	    				} else {
+	    					if (dependence.getProcPadre().equals("00000000")) {
+	    						isFree = isFree&&true;
+	    					} else {
+		    					String keyMap = dependence.getProcPadre()+":"+task.getNumSecExec();
+		    					switch (gDatos.getMapTask().get(keyMap).getStatus()) {
+		    						case "Finished":
+		    							isFree = isFree&&true;
+		    							break;
+	    							default:
+	    								isFree = isFree&&false;
+		    					}
+	    					}
+	    				}
+	    			}
+	    		}
+	    		return isFree;
+	    	} catch (Exception e) {
+	    		logger.error("Error en isFinishedDependences...: "+e.getMessage());
+	    		return false;
+	    	}
 	    }
         
         private void updateStatusReadyGrupoExec(TaskProcess taskProcess) {
@@ -128,7 +165,7 @@ public class thAsignaTask extends Thread{
 	    				 * Solo pone el grupoExec en Ready si estaba en Pending
 	    				 * 
 	    				 */
-	    				vSQL = "select status from tb_grlExec where grpID='"+taskProcess.getGrpID()+"' and numSecExec='"+taskProcess.getNumSecExec()+"'";
+	    				vSQL = "select status from tb_grpExec where grpID='"+taskProcess.getGrpID()+"' and numSecExec='"+taskProcess.getNumSecExec()+"'";
 	    				ResultSet rs = (ResultSet) md.getQuery(vSQL);
 	    				if (rs!=null) {
 	    					if (rs.next()) {

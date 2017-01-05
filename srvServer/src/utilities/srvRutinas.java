@@ -6,6 +6,7 @@
 package utilities;
 
 import dataClass.AssignedTypeProc;
+import dataClass.ETL;
 import dataClass.Interval;
 import dataClass.ServiceStatus;
 import dataClass.TaskProcess;
@@ -287,7 +288,10 @@ public class srvRutinas {
             
             gDatos.getServiceStatus().setMapAssignedTypeProc(gDatos.getMapAssignedTypeProc());
             gDatos.getServiceStatus().setMapTask(gDatos.getMapTask());
-            gDatos.getServiceStatus().setMapInterval(gDatos.getMapInteval());
+            
+            for (Map.Entry<String, TaskProcess> entry : gDatos.getServiceStatus().getMapTask().entrySet()) {
+            	logger.info("Enviando Task: "+entry.getKey()+ " status: "+entry.getValue().getStatus()+ " update: "+entry.getValue().getUpdateTime());
+            }
             
             JSONObject jo = new JSONObject(mapper.writeValueAsString(gDatos.getServiceStatus()));
             
@@ -305,88 +309,103 @@ public class srvRutinas {
     }
     
     public synchronized void updateStatusService(JSONObject jData) {
-    	
-    	ServiceStatus serviceStatus = new ServiceStatus();
-    	TaskProcess taskProcess 	= new TaskProcess();
-    	Map<String, Interval> vMapInterval = new TreeMap<>();
-    	
     	try {
-    		logger.info("Serializando objeto serviceStatus");
-			serviceStatus = (ServiceStatus) serializeJSonStringToObject(jData.getString("serviceStatus"), ServiceStatus.class);
-		} catch (IOException e) {
-			logger.error("Error Serializando objeto serviceStatus");
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-    	
-    	/*
-    	 * Actualiza Mapa de Intervalos
-    	 * genera una copia de la lista extraida desde el objeto serviceStatus
-    	 */
-    	vMapInterval = new TreeMap<>(serviceStatus.getMapInterval());
-    	
-    	//recorre la lista extraida par actualizar la global
-    	for (Map.Entry<String, Interval> entryInt : vMapInterval.entrySet()) {
-    		//la key del MapInterval es procID+intervalID
-    		if (gDatos.getMapInteval().containsKey(entryInt.getKey())) {
-    			//Actualiza los MapInterval en ejecución siempre y cuandon vengan
-    			//con status de Abort o Pause. Y solo actualiza interval que están em Ready
-    			String vStatus = entryInt.getValue().getStatus();
-    			if (vStatus.equals("Abort")||vStatus.equals("Pause")) {
-    				if (gDatos.getMapInteval().get(entryInt.getKey()).getStatus().equals("Ready")) {
-    					gDatos.getMapInteval().get(entryInt.getKey()).setStatus(vStatus);
-    					gDatos.getMapInteval().get(entryInt.getKey()).setFecUpdate(getDateNow());
-    				}
-    			}
-    		} else {
-    			gDatos.getMapInteval().put(entryInt.getKey(), entryInt.getValue());
-    		}
+	    	ServiceStatus serviceStatus = new ServiceStatus();
+	    	//Map<String, Interval> vMapInterval = new TreeMap<>();
+	    	
+	    	try {
+	    		logger.info("Serializando objeto serviceStatus");
+				serviceStatus = (ServiceStatus) serializeJSonStringToObject(jData.getString("serviceStatus"), ServiceStatus.class);
+			} catch (IOException e) {
+				logger.error("Error Serializando objeto serviceStatus");
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	    	
+	    	/**
+	    	 * Actualiza el Map AssignedTypeProc
+	    	 */
+	    	logger.info("Actualiza Map AssignedTypeProc");
+	    	gDatos.setMapAssignedTypeProc(serviceStatus.getMapAssignedTypeProc());
+	    	
+	    	/**
+	    	 * Actualiza las Task Asignadas
+	    	 */
+	    	logger.info("Actualizando Local MapTask");
+	    	
+	        for (Map.Entry<String, TaskProcess> entry : serviceStatus.getMapTask().entrySet()) {
+	        	TaskProcess newTask = new TaskProcess();
+	        	String key = entry.getKey();
+	        	newTask = entry.getValue();
+	        	
+	        	//Valida si la Task ya esta creada
+	        	if (gDatos.getMapTask().containsKey(key)) {
+	        		/**
+	        		 * Si existe la Task actualizar su status solo si fue abortada, suspendida
+	        		 * y si no esta en ejecución
+	        		 */
+	        		TaskProcess updateTask = new TaskProcess();
+	        		updateTask = gDatos.getMapTask().get(key);
+	        		
+	        		if (newTask.getStatus().equals("Abort")) {
+	        			//Solo si viene una instruccion de abortar desde el modulo central
+	        			
+	        		} else {
+	        			//Si no viene una instruccionn abortar deben primar los status locales ante los recibidos
+	        			//por lo tanto solo deben actualizarse los Mapas e Items de los procesos correspondientes
+	        			//determinados por el type de Proceso asociado a la TASK
+	        			switch (newTask.getTypeProc()) {
+	        				case "ETL":
+	        					String newEtlString = serializeObjectToJSon(newTask.getParams(), false);
+	        					ETL newEtl = new ETL();
+	        					newEtl = (ETL) serializeJSonStringToObject(newEtlString, ETL.class);
+	        					
+	        					String updateEtlString = serializeObjectToJSon(updateTask.getParams(), false);
+	        					ETL updateEtl = new ETL();
+	        					updateEtl = (ETL) serializeJSonStringToObject(updateEtlString, ETL.class);
+	        					
+	        					Map<String, Interval> newMapInterval = new TreeMap<>(newEtl.getMapInterval());
+	        					Map<String, Interval> updateMapInterval = new TreeMap<>(updateEtl.getMapInterval());
+	        					
+	        					//Actualiza el Map de Intervalos solo con los nuevos
+	        					for (Map.Entry<String, Interval> newInt : newMapInterval.entrySet()) {
+	        						if (!updateMapInterval.containsKey(newInt.getKey())) {
+	        							updateMapInterval.put(newInt.getKey(), newInt.getValue());
+	        						}
+	        					}
+	        					updateEtl.setMapInterval(updateMapInterval);
+	        					updateTask.setParams(updateEtl);
+	        					break;
+	    					default:
+	    						break;
+	        			}
+	        			
+	        		}
+	        	} else {
+	        		/**
+	        		 * No existe, hay que agregarla
+	        		 */
+	        		gDatos.getMapTask().put(key, newTask);
+	        	}
+	        	
+	            //try {
+					logger.info("Actualizada Task: " + entry.getKey()); // + ", valor=" + serializeObjectToJSon(gDatos.getMapTask().get(key), false));
+				//} catch (IOException e) {
+					// TODO Auto-generated catch block
+					//logger.error("Error desplegando desserializacion objeto taskProcess");
+					//e.printStackTrace();
+				//}
+	        }
+	    	
+	    	/**
+	    	 * Analizar este tipo de actualizacion por posibles perdidas de sincronizacion
+	    	 */
+	    	logger.info("Actualiza serviceStatus global");
+	    	gDatos.setServiceStatus(serviceStatus);
+    	} catch (Exception e) {
+    		logger.error("Error en updateStatusService...: "+e.getMessage());
     	}
     	
-    	/**
-    	 * Actualiza el Map AssignedTypeProc
-    	 */
-    	logger.info("Actualiza Map AssignedTypeProc");
-    	gDatos.setMapAssignedTypeProc(serviceStatus.getMapAssignedTypeProc());
-    	
-    	/**
-    	 * Analizar este tipo de actualizacion por posibles perdidas de sincronizacion
-    	 */
-    	logger.info("Actualiza serviceStatus global");
-    	gDatos.setServiceStatus(serviceStatus);
-    	
-    	/**
-    	 * Actualiza las Task Asignadas
-    	 */
-    	logger.info("Actualiza MapTask");
-        for (Map.Entry<String, TaskProcess> entry : serviceStatus.getMapTask().entrySet()) {
-        	String key = entry.getKey();
-        	taskProcess = entry.getValue();
-        	
-        	//Valida si la Task ya esta creada
-        	if (gDatos.getMapTask().containsKey(key)) {
-        		/**
-        		 * Si existe la Task actualizar su status solo si fue abortada, suspendida
-        		 * y si no esta en ejecución
-        		 */
-        		if (!gDatos.getMapTask().get(key).getStatus().equals("Running")&&!gDatos.getMapTask().get(key).getStatus().equals("Finished")) {
-        			gDatos.getMapTask().replace(key, taskProcess);
-        		}
-        	} else {
-        		/**
-        		 * No existe, hay que agregarla
-        		 */
-        		gDatos.getMapTask().put(key, taskProcess);
-        	}
-        	
-            //try {
-				logger.info("Actualizada Task: " + entry.getKey()); // + ", valor=" + serializeObjectToJSon(gDatos.getMapTask().get(key), false));
-			//} catch (IOException e) {
-				// TODO Auto-generated catch block
-				//logger.error("Error desplegando desserializacion objeto taskProcess");
-				//e.printStackTrace();
-			//}
-        }
     }
     
     public synchronized void updateAssignedProcess(JSONObject jData) {

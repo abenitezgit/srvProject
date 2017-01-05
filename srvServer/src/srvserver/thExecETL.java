@@ -29,17 +29,24 @@ import utilities.srvRutinas;
  * @author andresbenitez
  */
 public class thExecETL extends Thread{
-	boolean isConnectDBSource;
-	boolean isConnectDBDest;
     TaskProcess taskProcess = new TaskProcess();
     static srvRutinas gSub;
     static globalAreaData gDatos;
-    Map<String, Interval> mapInterval;
-    ETL etl = new ETL();
     String vSQLSource;
     String vSQLDest;
     int totalNewInterval;
-    Logger logger = Logger.getLogger("thExecETL");
+	int gNumIntFinished;
+	int gNumIntReady;
+	int gNumIntError;
+	int gNumIntRunning;
+	StringBuilder columnNames;
+	StringBuilder bindVariables;
+	PreparedStatement psInsertar;
+	dataAccess sConn = new dataAccess(gDatos);
+	dataAccess dConn = new dataAccess(gDatos);
+
+    Logger logger = Logger.getLogger("srv.execEtl");
+    Logger logint = Logger.getLogger("srv.etlInterval");
     
     public thExecETL(globalAreaData m, TaskProcess taskProcess) {
         this.taskProcess = taskProcess;
@@ -47,28 +54,13 @@ public class thExecETL extends Thread{
         gSub = new srvRutinas(gDatos);
     }
     
-    @Override
-    public void run() {
-        logger.info("Iniciando ejecución ETL:"+taskProcess.getProcID()+" "+taskProcess.getNumSecExec());
-        
-        if (isValidDataParam()) {
-        	
-            String etlString="";
-			try {
-				etlString = gSub.serializeObjectToJSon(taskProcess.getParams(), false);
-			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-            
-            
-            try {
-				etl = (ETL) gSub.serializeJSonStringToObject(etlString, ETL.class);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-
+    
+    private boolean isConnectedDB(ETL etl) {
+    	try {
+    		boolean isConnectDBSource;
+    		boolean isConnectDBDest;
+    		
+    		
         	/**
         	 * Establece conexion hacia BD Origen
         	 */
@@ -79,8 +71,6 @@ public class thExecETL extends Thread{
         	logger.info("UserName: "+etl.getSUSERNAME());
         	logger.debug("Pass: "+etl.getSUSERPASS());
         	
-            dataAccess sConn = new dataAccess(gDatos);
-            
             sConn.setDbType(etl.getSDBTYPE());
             sConn.setDbHost(etl.getSIP());
             sConn.setDbPort(etl.getSDBPORT());
@@ -97,7 +87,7 @@ public class thExecETL extends Thread{
             	logger.info("Base origen NO connected!");
                 isConnectDBSource = false;
             }
-            
+
             /**
              * Establece conexion hacia BD Destino
              */
@@ -108,7 +98,6 @@ public class thExecETL extends Thread{
         	logger.info("UserName: "+etl.getDUSERNAME());
         	logger.debug("Pass: "+etl.getDUSERPASS());
             
-            dataAccess dConn = new dataAccess(gDatos);
             dConn.setDbType(etl.getDDBTYPE());
             dConn.setDbHost(etl.getDIP());
             dConn.setDbPort(etl.getDDBPORT());
@@ -116,7 +105,6 @@ public class thExecETL extends Thread{
             dConn.setDbUser(etl.getDUSERNAME());
             dConn.setDbPass(etl.getDUSERPASS());
            
-            
             dConn.conectar();
             
             if (dConn.isConnected()) {
@@ -126,459 +114,324 @@ public class thExecETL extends Thread{
             	logger.info("Base Destino NO connected!");
             	isConnectDBDest = false;
             }
-            
-            /**
-             * Recupera Intervalos desde Metatada
-             * los cuales debe venir como lista de intervalos en objeto ETL
-             */
-            
-            totalNewInterval=0;
-            
-            //mapInterval = new TreeMap<>(etl.getMapInterval());
-            
-            logger.info("Inscribiendo intervalos desde Metadata");
-            for (Map.Entry<String, Interval> entry : mapInterval.entrySet()) {
-                if (!gDatos.getMapInteval().containsKey(entry.getKey())) {
-                	gDatos.getMapInteval().put(entry.getKey(), entry.getValue());
-                	logger.info("Nuevo intervalo inscrito: "+entry.getKey());
-                	totalNewInterval++;
-                }
-            }
-            
-            
-            if (isConnectDBSource&&isConnectDBDest) {
-            
-            /**
-             * Genera nuevos intervalos faltantes
-             */
-            
-            logger.info("Inscribiendo intervalos nuevos");
-        	if (genNewIntervals()) {
-        		
-        		if (totalNewInterval>0) {
-        		
-	        		logger.info("Generando query global de extracción...");
-	        		if (genQueryExtract()) {
-	    	        	/**
-	    	        	 * Procesa Extraccion de Intervalos
-	    	        	 */
-	    	        
-	    	        	logger.info("Inicio Proceso de Extracción de Intervalos Generados");
-	
-	    	        	
-	    	        
-	    	        	//Genera las conversiones de fecha en base al type de datos del keyField
-	    	        	int itera=1;
-	    	        	
-	    	        	Map<String, Interval> myMapInterval = new TreeMap<>(gDatos.getMapInteval());
-	    	        
-	    	            for (Map.Entry<String, Interval> entry : myMapInterval.entrySet()) {
-	    	            	if   (itera>10000000) {
-	    	            		break;
-	    	            	} else {
-	    	            		itera++;
-	    	            	}
-	    	            	
-	    	                if (entry.getValue().getStatus().equals("Ready")&&entry.getValue().getNumSecExec().equals(taskProcess.getNumSecExec())) {
-	    						int rowsRead=0;
-	    						int rowsLoad=0;
-	
-	    	                	logger.info("Ejecutando Intervalo: "+entry.getKey());
-	    	                	/**
-	    	                	 * Genera Query para Cada Intervalo
-	    	                	 */
-	    	                	
-	    	                	/**
-	    	                	 * Actualiza Status del Interval y TaskProcess
-	    	                	 */
-	    	                	logger.info("Actualiza status del Intervalo");
-	    	                	gDatos.getMapInteval().get(entry.getKey()).setFecIns(gSub.getDateNow());
-	    	                	gDatos.getMapInteval().get(entry.getKey()).setFecUpdate(gSub.getDateNow());
-	    	                	gDatos.getMapInteval().get(entry.getKey()).setStatus("Running");
-	    	                	
-	    	                	logger.info("Actualiza status del ETL");
-	    	                	//etl.setMapInterval(gDatos.getMapInteval());
-	    	                	
-	    	                	logger.info("Actualiza status del Task");
-	    	                	taskProcess.setUpdateTime(gSub.getDateNow());
-	    	                	taskProcess.setStartTime(gSub.getDateNow());
-	    	                	taskProcess.setParams(etl);
-	    	                	
-	    	                	gDatos.getMapTask().replace(taskProcess.getProcID()+":"+taskProcess.getNumSecExec(), taskProcess);
-	    	                	
-	//    	                	gDatos.getMapTask().get(taskProcess.getProcID()+":"+taskProcess.getNumSecExec()).setUpdateTime(gSub.getDateNow());
-	//    	                	gDatos.getMapTask().get(taskProcess.getProcID()+":"+taskProcess.getNumSecExec()).setParams(etl);
-	    	                	
-	    	                	
-	    	                	String vQuery = new String(vSQLSource);
-	    	                	String fecQueryIni;
-	    	                	String fecQueryFin;
-	    	    	        	switch (etl.getFIELDTYPE()) {
-	    				        	case "date":
-	    				        		fecQueryIni = fnConvertFecInterval(entry.getValue().getFecIni(),"date",etl.getSDBTYPE());
-	    				        		fecQueryFin = fnConvertFecInterval(entry.getValue().getFecFin(),"date",etl.getSDBTYPE());
-	    				        		break;
-	    				        	case "int":
-	    				        		fecQueryIni = fnConvertFecInterval(entry.getValue().getFecIni(),"int",etl.getSDBTYPE());
-	    				        		fecQueryFin = fnConvertFecInterval(entry.getValue().getFecFin(),"int",etl.getSDBTYPE());
-	    				        		break;
-	    				        	case "varchar":
-	    				        		fecQueryIni = fnConvertFecInterval(entry.getValue().getFecIni(),"varchar",etl.getSDBTYPE());
-	    				        		fecQueryFin = fnConvertFecInterval(entry.getValue().getFecFin(),"varchar",etl.getSDBTYPE());
-	    				        		break;
-	    				        	default:
-	    				        		fecQueryIni="";
-	    				        		fecQueryFin="";
-	    				        		break;
-	    	    	        	}
-	    	    	        	
-	    	    	        	vQuery = vQuery + etl.getFIELDKEY() + " >= " + fecQueryIni;
-	    	    	        	vQuery = vQuery + " and " + etl.getFIELDKEY() + " < " + fecQueryFin;
-	    	    	        	
-	    	    	        	/**
-	    	    	        	 * Ejecuta Query en DBSource
-	    	    	        	 */
-	    	    	        	logger.info("Ejecutando Query a DBSource: "+vQuery);
-	    	    	        	ResultSet rs = (ResultSet) sConn.getQuery(vQuery);
-	    	    	        	if (rs!=null) {
-	    	    	        		
-	    	    	        		logger.debug("Resultado de rs no es nulo.");
-	    	    	        		
-	    	    	        		StringBuilder columnNames = new StringBuilder();
-	    	    	        		StringBuilder bindVariables = new StringBuilder();
-	    	    	        		
-	    	    	        		int totalCols=0;
-	    	    	        		for (int nf=0; nf<etl.getLstEtlMatch().size(); nf++) {
-	    		        				if (nf>0) {
-	    		        					columnNames.append(", ");
-	    		        					bindVariables.append(", ");
-	    		        				}
-	    						       columnNames.append(etl.getLstEtlMatch().get(nf).getEtlDestField());
-	    						       bindVariables.append('?');
-	    						       totalCols = nf+1;
-	    	    	        		}
-	    	    	        		
-	    	    	        		logger.info("Total de Columnas obtenidas: "+totalCols);
-	    									  
-	    							try {
-	    								
-	    								logger.info("Cargando datos de Etl-Interval: "+entry.getKey());
-	    								int showRows=1000;
-	    								while (rs.next()) {
-	    									rowsRead++;
-	    											
-	    									PreparedStatement psInsertar = null;
-	    									String pSql = "insert into "
-	    											+ etl.getDTBNAME()
-	    											+ " ( " 
-	    											+ columnNames 
-	    											+ " ) VALUES ( " 
-	    											+ bindVariables	+ " ) ";
-	    									
-	    									//logger.debug("se insertará sql: "+pSql);
-	    									try {
-	    										psInsertar =  dConn.getConnection().prepareStatement(pSql);
-	    									} catch (Exception e) {
-	    										logger.error("Error deconocido en psInsertar.."+e.getMessage());
-	    									}
-	    									logger.debug("Recuperando valores de datos...");
-	    									try {
-	    										for (int nf=0; nf<etl.getLstEtlMatch().size(); nf++) {
-	    											switch (etl.getLstEtlMatch().get(nf).getEtlSourceType()) {
-	    												case "varchar":
-	    													psInsertar.setString(nf+1, rs.getString(nf+1));
-	    													break;
-	    												case "int":
-	    													psInsertar.setInt(nf+1, rs.getInt(nf+1));
-	    													break;
-	    												case "date":
-	    													psInsertar.setDate(nf+1, rs.getDate(nf+1));
-	    													break;
-	    												default:
-	    													psInsertar.setString(nf+1, rs.getString(nf+1));
-	    											}
-	    										}
-	    									} catch (Exception e) {
-	    										logger.error("Error incorporando parametros al insert "+e.getMessage());
-	    									}
-	
-	    									try {
-	    										
-	    										if (psInsertar.executeUpdate()==1) {
-	    											rowsLoad++;
-	    										}
-	    										
-												if (rowsRead==showRows) {
-													logger.info("Filas leídas   Etl-Interval "+entry.getKey()+ ": "+rowsRead);
-													logger.info("Filas cargadas Etl-Interval "+entry.getKey()+ ": "+rowsLoad);
-						    						gDatos.getMapInteval().get(entry.getKey()).setRowsLoad(rowsLoad);
-						    						gDatos.getMapInteval().get(entry.getKey()).setRowsRead(rowsRead);
-						    						
-						    						//etl.setMapInterval(gDatos.getMapInteval());
-						    						
-						    						taskProcess.setParams(etl);
-						    						
-						    						gDatos.getMapTask().replace(taskProcess.getProcID()+":"+taskProcess.getNumSecExec(), taskProcess);
-	
-													showRows=showRows+1000;
-												}
-	
-	    									} catch (Exception e) {
-	    										logger.error("insercion insertando: "+pSql+ " error: "+e.getMessage());
-	    									}
-	    								} //end while rescorset dbSource
-	    								rs.close();
-	    								logger.info("Finalizando caga de Etl-Interval: "+entry.getKey());
-	    								
-	    								
-	    							} catch (SQLException e) {
-	    								// TODO Auto-generated catch block
-	    								//e.printStackTrace();
-	    								logger.error("Error inesperado en ciclo recorre DBSource "+e.getMessage());
-	    							} //end while
-	    	    	        	} else {
-	    	    	        		logger.info("No hay datos para el intervalo: "+entry.getKey());
-	    	    	        	}//end if (rs!=null)
-	    	    	        	
-	    						logger.info("Se leyeron: "+rowsRead+" filas para el intervalo: "+entry.getKey());
-	    						logger.info("Se cargaron: "+rowsLoad+" filas para el intervalo: "+entry.getKey());
-	    						
-	    						/**
-	    						 * Actualizando Status del Interval
-	    						 */
-	    						gDatos.getMapInteval().get(entry.getKey()).setRowsLoad(rowsLoad);
-	    						gDatos.getMapInteval().get(entry.getKey()).setRowsRead(rowsRead);
-	    						gDatos.getMapInteval().get(entry.getKey()).setuStatus("Finished");
-	    						gDatos.getMapInteval().get(entry.getKey()).setStatus("Finished");
-	    						gDatos.getMapInteval().get(entry.getKey()).setFecUpdate(gSub.getDateNow());
-	    						
-	    						//etl.setMapInterval(gDatos.getMapInteval());
-	    						
-	    						taskProcess.setParams(etl);
-	    						
-	    						gDatos.getMapTask().replace(taskProcess.getProcID()+":"+taskProcess.getNumSecExec(), taskProcess);
-	    						
-	    	    	        	
-	    	                } //end if interval is Ready
-	    	                logger.info("Finalizando Intervalo: "+entry.getKey());
-	                    } //end for recorre intervals
-	        		}
-	        	}
-	        	dConn.closeConnection();
-	        	sConn.closeConnection();
-	        	
-	        	taskProcess.setStatus("Finished");
-	        	taskProcess.setuStatus("Finished");
-        	} else {
-        		logger.error("No hay intervalos nuevos para generar");
-            	taskProcess.setStatus("Finished");
-            	taskProcess.setuStatus("Finished");
-        	}
 
-        } else {
-        	logger.error("No es posible conectarse a bases destino o source.");
-        	taskProcess.setStatus("Error");
-        	taskProcess.setuStatus("Error");
-        }
-        } else {
-            logger.error("Error en lectura de parámetros de entrada.");
-        	taskProcess.setStatus("Error");
-        	taskProcess.setuStatus("Error");
-        }
-        
-        /**
-         * Finalizando proceso de ETL
-         */
-        taskProcess.setEndTime(gSub.getDateNow());
-        taskProcess.setUpdateTime(gSub.getDateNow());
-        
-        logger.info("Finalizando ejecución ETL:"+taskProcess.getProcID()+" "+taskProcess.getNumSecExec());
-    }
-    
-    private boolean genNewIntervals() {
-    	try {
-	        //Extre Fecha Actual
-	        Date today;
-	        Date fecGap;
-	        Date fecIni;
-	        Date fecItera;
-	        Date fecIntervalIni;
-	        Date fecIntervalFin;
-	
-	        int MinItera;
-	        int HoraItera;
-	        int DiaItera;
-	        int MesItera;
-	        int AnoItera;
-	
-	        long numInterval;
-	        String localIntervalID;
-	        String todayChar;
-
-
-	        //Setea Fecha Actual
-	        //
-	        today = new Date();
-	        
-	        //Variables del Objeto ETL
-	        //
-	        int vTimeGap = etl.getTIMEGAP();
-	        int vTimePeriod = etl.getTIMEPERIOD();
-	        int vTimeGen = etl.getTIMEGEN();
-	        String vUnitMeasure = etl.getUNITMEASURE();
-	        String vETLID = etl.getETLID();
-            
-	        //Setea Fecha GAP - Desface de tiempo en extraccion
-	        //
-	        Calendar c = Calendar.getInstance();
-	        c.add(Calendar.MINUTE, -(vTimeGap+vTimePeriod));
-	        fecGap = c.getTime();
-
-	        //Setea Fecha Inicio Inscripcion/Revision de Intervalos
-	        //
-	
-	        c.setTime(today);
-	        c.add(Calendar.MINUTE, -vTimeGen);
-	        fecIni = c.getTime();
-
-	        logger.info("Datos del ETLID: "+vETLID);
-	        logger.info("Fecha Actual: "+ today);
-	        logger.info("Fecha GAP   : "+ fecGap);
-	        logger.info("Fecha IniIns: "+ fecIni);
-        
-	        fecItera = fecIni;
-	        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
-	        SimpleDateFormat sdfToday = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-	        String IntervalIni;
-	        String IntervalFin;
-	        Interval interval;
-        
-	        while (fecItera.compareTo(fecGap) < 0) {
-	            //Crea Objecto Interval
-	            //
-	            interval = new Interval();
-	
-	            //Extrae Intervalo para Fecha fecItera
-	            //
-	            c.setTime(fecItera);
-	            AnoItera = c.get(Calendar.YEAR);
-	            MesItera = c.get(Calendar.MONTH);
-	            DiaItera = c.get(Calendar.DAY_OF_MONTH);
-	            HoraItera = c.get(Calendar.HOUR_OF_DAY);
-	            MinItera = c.get(Calendar.MINUTE);
-	
-	            //Valida si el intervalo de extraccion (cETL_INTERVALUNIDAD) es por:
-	            //  Minutos     : 0
-	            //  Horas       : 1
-	            //  Dias        : 2
-	            //  Semanas     : 3
-	            //  Mensuales   : 4
-	            //  Anuales     : 5
-	
-	            switch (vUnitMeasure) {
-	                case "MINUTE":
-	                    fecIntervalIni = null;
-	                    fecIntervalFin = null;
-	                    numInterval = 60/vTimePeriod;
-	                    for (int i=1;i<=numInterval;i++) {
-	                        c.set(AnoItera, MesItera, DiaItera, HoraItera, (i)*vTimePeriod,0);
-	                        fecIntervalFin = c.getTime();
-	                        if (fecIntervalFin.compareTo(fecItera) >0 ) {
-	                            c.set(AnoItera, MesItera, DiaItera, HoraItera, (i-1)*vTimePeriod,0);
-	                            fecIntervalIni = c.getTime();
-	                            break;
-	                        }
-	                    }
-	                    c.setTime(fecItera);
-	                    c.add(Calendar.MINUTE, vTimePeriod);
-	                    fecItera = c.getTime();
-	
-	
-	                    IntervalIni = sdf.format(fecIntervalIni);
-	                    IntervalFin = sdf.format(fecIntervalFin);
-	                    localIntervalID = IntervalIni+'-'+IntervalFin;
-	
-//	                    logger.debug("Datos de Inicio de Extraccion de Intervalos...");
-//	                    logger.debug("Fecha inicio intervalo: "+ fecIntervalIni);
-//	                    logger.debug("Fecha fin Intervalo: "+fecIntervalFin);
-//	                    logger.debug("IntervalID generado: "+localIntervalID);
-	
-	                    interval.setETLID(vETLID);
-	                    interval.setIntervalID(localIntervalID);
-	                    interval.setStatus("Ready");
-	                    interval.setNumSecExec(taskProcess.getNumSecExec());
-	                    interval.setFecIns(sdfToday.format(today));
-	                    interval.setFecUpdate(sdfToday.format(today));
-	                    interval.setFecIni(IntervalIni);
-	                    interval.setFecFin(IntervalFin);
-	
-	                    if (!gDatos.getMapInteval().containsKey(vETLID+":"+localIntervalID)) {
-	                    	gDatos.getMapInteval().put(vETLID+":"+localIntervalID, interval);
-	                    	logger.info("Nuevo intervalo inscrito: "+vETLID+":"+localIntervalID);
-	                    	totalNewInterval++;
-	                    }
-	
-	                    break;
-	
-	                    case "HOUR":
-	                        fecIntervalIni = null;
-	                        fecIntervalFin = null;
-	                        numInterval = 24/vTimePeriod;
-	                        for (int i=1;i<=numInterval;i++) {
-	                            c.set(AnoItera, MesItera, DiaItera, (i)*vTimePeriod, 0, 0);
-	                            fecIntervalFin = c.getTime();
-	                            if (fecIntervalFin.compareTo(fecItera) >0 ) {
-	                                c.set(AnoItera, MesItera, DiaItera, (i-1)*vTimePeriod, 0, 0);
-	                                fecIntervalIni = c.getTime();
-	                                break;
-	                            }
-	                        }
-	                        c.setTime(fecItera);
-	                        c.add(Calendar.HOUR_OF_DAY, vTimePeriod);
-	                        fecItera = c.getTime();
-	
-	                        IntervalIni = sdf.format(fecIntervalIni);
-	                        IntervalFin = sdf.format(fecIntervalFin);
-	                        localIntervalID = IntervalIni+'-'+IntervalFin;                    
-	
-	
-//	                        logger.debug("Datos de Inicio de Extraccion de Intervalos...");
-//	                        logger.debug("Fecha inicio intervalo: "+ fecIntervalIni);
-//	                        logger.debug("Fecha fin Intervalo: "+fecIntervalFin);
-//	                        logger.debug("IntervalID generado: "+localIntervalID);
-	
-	                        interval.setETLID(vETLID);
-	                        interval.setIntervalID(localIntervalID);
-	                        interval.setStatus("Ready");
-	                        interval.setNumSecExec(taskProcess.getNumSecExec());
-	                        interval.setFecIns(sdfToday.format(today));
-	                        interval.setFecUpdate(sdfToday.format(today));
-	                        interval.setFecIni(IntervalIni);
-	                        interval.setFecFin(IntervalFin);
-	
-	                        if (!gDatos.getMapInteval().containsKey(vETLID+":"+localIntervalID)) {
-	                        	gDatos.getMapInteval().put(vETLID+":"+localIntervalID, interval);
-	                        	logger.info("Nuevo intervalo inscrito: "+vETLID+":"+localIntervalID);
-	                        	totalNewInterval++;
-	                        }
-	
-	                        break;
-	
-	                    case "2":
-	                    case "3":
-	                    case "4":
-	                    case "5":
-	                    default:
-	                } //end switch
-	            } //end while
-	        return true;
+    		if (isConnectDBSource&&isConnectDBDest) {
+    			return true;
+    		} else {
+    			return false;
+    		}
+    		
     	} catch (Exception e) {
-    		logger.error("Error generando intervalos faltantes..."+e.getMessage());
+    		logger.error("Error modulo isConnectedDB...: "+e.getMessage());
     		return false;
     	}
     }
     
-    private boolean genQueryExtract() {
+    private Map<String, Interval> genExecInterval(ETL etl) throws Exception {
+    	Map<String, Interval> mapInterval = new TreeMap<>(etl.getMapInterval());
+    	Map<String, Interval> execInterval = new TreeMap<>();
+    	
+    	for (Map.Entry<String, Interval> mapInt : mapInterval.entrySet()) {
+    		//Aplica Criterio para entregar intervalos a ejecutar
+    		if (mapInt.getValue().getStatus().equals("Ready")) {
+    			execInterval.put(mapInt.getKey(), mapInt.getValue());
+    		}
+    	}
+    	return execInterval;
+    }
+    
+    
+    @Override
+    public void run() {
+    	String errMesg = "";
+    	try {
+    		boolean statusExit=true;
+    		
+    		logger.info("Iniciando ejecución ETL:"+taskProcess.getProcID()+" "+taskProcess.getNumSecExec());
+    		
+    		gDatos.getMapTask().get(taskProcess.getProcID()+":"+taskProcess.getNumSecExec()).setStatus("Running");
+    		gDatos.getMapTask().get(taskProcess.getProcID()+":"+taskProcess.getNumSecExec()).setUpdateTime(gSub.getDateNow());
+    		
+    		if (isValidDataParam()) {
+    			
+    			//Serializa Objetos
+    			String etlString = gSub.serializeObjectToJSon(taskProcess.getParams(), false);
+    			ETL etl = (ETL) gSub.serializeJSonStringToObject(etlString, ETL.class);
+    			
+    			if (isConnectedDB(etl)) {
+    				
+    				//Encuentra los intervalos con alguna politica para ser ejecutados
+    				//y los deja en Map local execInterval
+    				Map<String, Interval> execInterval = new TreeMap<>(genExecInterval(etl));
+    				
+    				if (execInterval.size()>0) {
+    					
+    					//Genera la base de la query de extraccion
+    					//despues le añade el where
+    					vSQLSource = genQueryExtract(etl);
+    					
+    					for (Map.Entry<String, Interval> execInt : execInterval.entrySet()) {
+    						//Recupera key y objeto
+    						String keyMapInterval = execInt.getKey();
+    						Interval interval = execInt.getValue();
+    						
+    						//actualiza status interval a Running
+    						logint.info("Procesando Intervalo: "+taskProcess.getProcID()+":"+taskProcess.getIntervalID());
+    						updateIntervalStatus(taskProcess, etl, interval, "Running");
+    						//updateTaskStatus(taskProcess, etl, "Running");
+    						
+    	        			//Ejecuta Borrado de data del intervalo
+    						//if swDelete esta activo
+	    	        			String vQueryDelete = genSqlQueryDeleteDbSource(etl, interval);
+	    	        			int rowsDeleted = dConn.execQuery(vQueryDelete);
+	    	        			//logger.info("Total filas borradas para intevalo "+keyMapInterval+" :"+ rowsDeleted);
+	    	        			logint.info("Total filas borradas para intevalo "+keyMapInterval+" :"+ rowsDeleted);
+	    	        			
+    	        			//Ejecuta Query de Extraccion de Datos
+    	        			String vQueryExtract = genSqlQueryDbSource(etl, interval);
+    	        			ResultSet rsExtract = (ResultSet) dConn.getQuery(vQueryExtract);
+
+	        				int rowsLoad=0;
+	        				int rowsRead=0;
+
+    	        			if (rsExtract!=null) {
+    	        				int numShows=2000;
+    	        				int iteShows=2000;
+    	        				genColumnBind(etl);
+    	        				while (rsExtract.next()) {
+    	        					rowsRead++;
+    	        					try {
+	    	        					psInsertar = genPrepareStatement(etl, dConn, rsExtract);
+	    	        					
+	    	        					if (psInsertar.executeUpdate()==1) {
+	    	        						rowsLoad++;
+	    	        					}
+    	        					} catch (Exception e) {
+    	        						String vMesg = "Error insertando fila en intervalo: "+keyMapInterval;
+    	        						vMesg = vMesg + "...: "+e.getMessage();
+	        							//logger.error(vMesg);
+	        							logint.error(vMesg);
+    	        					}
+    	        					
+    	        					if (rowsRead==numShows) {
+    	        						//Muestra parcial filas cargadas
+										//logger.info("Filas leídas   Etl-Interval "+keyMapInterval+ ": "+rowsRead);
+										//logger.info("Filas cargadas Etl-Interval "+keyMapInterval+ ": "+rowsLoad);
+										logint.info("Filas leídas   Etl-Interval "+keyMapInterval+ ": "+rowsRead);
+										logint.info("Filas cargadas Etl-Interval "+keyMapInterval+ ": "+rowsLoad);
+										
+										updateIntervalStatusRows(taskProcess, etl, interval, rowsRead, rowsLoad);
+										
+    	        						numShows=numShows + iteShows;
+    	        					}
+    	        				}
+    	        				rsExtract.close();
+    	        			}
+    	        			
+    	        			//Termino de Ejecucion de cada intervalo cargado
+    	        			//logger.info("Finalizando caga de Etl-Interval: "+keyMapInterval);
+    						//logger.info("Se leyeron: "+rowsRead+" filas para el intervalo: "+keyMapInterval);
+    						//logger.info("Se cargaron: "+rowsLoad+" filas para el intervalo: "+keyMapInterval);
+
+    	        			logint.info("Finalizando caga de Etl-Interval: "+keyMapInterval);
+    	        			logint.info("Se leyeron: "+rowsRead+" filas para el intervalo: "+keyMapInterval);
+    	        			logint.info("Se cargaron: "+rowsLoad+" filas para el intervalo: "+keyMapInterval);
+
+    						
+    						updateIntervalStatus(taskProcess, etl, interval, "Finished");
+    						//updateTaskStatus(taskProcess, etl, "Finished");
+    						
+    					}
+    					
+    				} else {
+    					logger.warn("No hay intervalos pendientes para ejecutar por Task: "+taskProcess.getProcID()+" "+taskProcess.getNumSecExec());
+    				}
+
+    			} else {
+        			statusExit=false;
+        			errMesg="No es posible conectarse a las Bases de Datos";    				
+    			}
+    			
+    		} else {
+    			statusExit=false;
+    			errMesg="No se pudo validar DataParam()";
+    		}
+    		
+    		//Terminando Ejecucion de ETL
+    		
+    		if (statusExit) {
+    			logger.info("Termino Exitoso ejecucion ETL:"+taskProcess.getProcID()+" "+taskProcess.getNumSecExec());
+        		gDatos.getMapTask().get(taskProcess.getProcID()+":"+taskProcess.getNumSecExec()).setStatus("Finished");
+        		gDatos.getMapTask().get(taskProcess.getProcID()+":"+taskProcess.getNumSecExec()).setUpdateTime(gSub.getDateNow());
+
+    		} else {
+    			logger.error("Termino Erroneo ejecucion ETL:"+taskProcess.getProcID()+" "+taskProcess.getNumSecExec()+ " Mesg: "+ errMesg);
+        		gDatos.getMapTask().get(taskProcess.getProcID()+":"+taskProcess.getNumSecExec()).setStatus("Error");
+        		gDatos.getMapTask().get(taskProcess.getProcID()+":"+taskProcess.getNumSecExec()).setUpdateTime(gSub.getDateNow());
+
+    		}
+    		
+    	} catch (Exception e) {
+    		logger.error("Error en thExecETL3...: "+e.getMessage());
+    		gDatos.getMapTask().get(taskProcess.getProcID()+":"+taskProcess.getNumSecExec()).setStatus("Error");
+    		gDatos.getMapTask().get(taskProcess.getProcID()+":"+taskProcess.getNumSecExec()).setUpdateTime(gSub.getDateNow());
+
+    	}
+    } //fin run()
+    
+    private void updateIntervalStatusRows(TaskProcess task, ETL etl, Interval interval, int rowsRead, int rowsLoad) throws Exception {
+    	interval.setRowsLoad(rowsLoad);
+    	interval.setRowsRead(rowsRead);
+    	interval.setFecUpdate(gSub.getDateNow());
+    	etl.getMapInterval().put(interval.getIntervalID(), interval);
+
+    	String keyMap = task.getProcID()+":"+task.getNumSecExec();
+    	gDatos.getMapTask().get(keyMap).setUpdateTime(gSub.getDateNow());
+    	gDatos.getMapTask().get(keyMap).setParams(etl);
+    }
+    
+    private void updateTaskStatus(TaskProcess task, ETL etl, String status) throws Exception {
+    	task.setStatus(status);
+    	task.setUpdateTime(gSub.getDateNow());
+    	task.setParams(etl);
+    	String keyMap = task.getProcID()+":"+task.getNumSecExec();
+    	gDatos.getMapTask().put(keyMap, task);
+    }
+    
+    private void updateIntervalStatus(TaskProcess task, ETL etl, Interval interval, String status) throws Exception{
+    	interval.setStatus(status);
+    	interval.setFecUpdate(gSub.getDateNow());
+    	etl.getMapInterval().put(interval.getIntervalID(), interval);
+    	String keyMap = task.getProcID()+":"+task.getNumSecExec();
+    	gDatos.getMapTask().get(keyMap).setParams(etl);
+    	gDatos.getMapTask().get(keyMap).setUpdateTime(gSub.getDateNow());
+    	
+    }
+    
+    private PreparedStatement genPrepareStatement(ETL etl, dataAccess dConn, ResultSet rs) throws SQLException {
+		String pSql = "insert into "
+				+ etl.getDTBNAME()
+				+ " ( " 
+				+ columnNames 
+				+ " ) VALUES ( " 
+				+ bindVariables	+ " ) ";
+		
+		psInsertar =  dConn.getConnection().prepareStatement(pSql);
+		
+		for (int nf=0; nf<etl.getLstEtlMatch().size(); nf++) {
+			switch (etl.getLstEtlMatch().get(nf).getEtlSourceType()) {
+				case "varchar":
+					psInsertar.setString(nf+1, rs.getString(nf+1));
+					break;
+				case "int":
+					psInsertar.setInt(nf+1, rs.getInt(nf+1));
+					break;
+				case "date":
+					psInsertar.setDate(nf+1, rs.getDate(nf+1));
+					break;
+				default:
+					psInsertar.setString(nf+1, rs.getString(nf+1));
+			}
+		}
+		
+		return psInsertar;
+    }
+    
+    private void genColumnBind(ETL etl) {
+    	
+    	//Inicializa variables globales
+    	
+		columnNames = new StringBuilder();
+		bindVariables = new StringBuilder();
+		
+		for (int nf=0; nf<etl.getLstEtlMatch().size(); nf++) {
+			if (nf>0) {
+				columnNames.append(", ");
+				bindVariables.append(", ");
+			}
+	       columnNames.append(etl.getLstEtlMatch().get(nf).getEtlDestField());
+	       bindVariables.append('?');
+		}
+    }
+    
+    private String getFecQueryIni(ETL etl, String fecIntervalIni) {
+    	switch (etl.getFIELDTYPE()) {
+        	case "date":
+        		return fnConvertFecInterval(fecIntervalIni,"date",etl.getSDBTYPE());
+        	case "int":
+        		return fnConvertFecInterval(fecIntervalIni,"int",etl.getSDBTYPE());
+        	case "varchar":
+        		return fnConvertFecInterval(fecIntervalIni,"varchar",etl.getSDBTYPE());
+        	default:
+        		return "";
+    	}
+    }
+    
+    private String getFecQueryFin(ETL etl, String fecIntervalFin) {
+    	switch (etl.getFIELDTYPE()) {
+        	case "date":
+        		return fnConvertFecInterval(fecIntervalFin,"date",etl.getSDBTYPE());
+        	case "int":
+        		return fnConvertFecInterval(fecIntervalFin,"int",etl.getSDBTYPE());
+        	case "varchar":
+        		return fnConvertFecInterval(fecIntervalFin,"varchar",etl.getSDBTYPE());
+        	default:
+        		return "";
+    	}
+    }
+    
+    private String getFecQueryDelIni(ETL etl, String fecIntervalIni) {
+    	switch (etl.getFIELDTYPE()) {
+        	case "date":
+        		return fnConvertFecInterval(fecIntervalIni,"date",etl.getDDBTYPE());
+        	case "int":
+        		return fnConvertFecInterval(fecIntervalIni,"int",etl.getDDBTYPE());
+        	case "varchar":
+        		return fnConvertFecInterval(fecIntervalIni,"varchar",etl.getDDBTYPE());
+        	default:
+        		return "";
+    	}
+    }
+
+    
+    private String getFecQueryDelFin(ETL etl, String fecIntervalFin) {
+    	switch (etl.getFIELDTYPE()) {
+        	case "date":
+        		return fnConvertFecInterval(fecIntervalFin,"date",etl.getDDBTYPE());
+        	case "int":
+        		return fnConvertFecInterval(fecIntervalFin,"int",etl.getDDBTYPE());
+        	case "varchar":
+        		return fnConvertFecInterval(fecIntervalFin,"varchar",etl.getDDBTYPE());
+        	default:
+        		return "";
+    	}
+    }
+    
+    private String genSqlQueryDbSource(ETL etl, Interval interval) {
+    	String vQuery = new String(vSQLSource);
+    	String fecQueryIni = getFecQueryIni(etl, interval.getFecIni());
+    	String fecQueryFin = getFecQueryFin(etl, interval.getFecFin());
+    	
+    	vQuery = vQuery + etl.getFIELDKEY() + " >= " + fecQueryIni;
+    	vQuery = vQuery + " and " + etl.getFIELDKEY() + " < " + fecQueryFin;
+    	
+    	return vQuery;
+    }
+    
+    private String genSqlQueryDeleteDbSource(ETL etl, Interval interval) {
+    	String vQuery;
+    	
+    	String fecQueryIni = getFecQueryDelIni(etl, interval.getFecIni());
+    	String fecQueryFin = getFecQueryDelFin(etl, interval.getFecFin());
+    	
+    	vQuery = " delete from "+ etl.getDTBNAME();
+    	vQuery = vQuery + " where " + etl.getFIELDKEY() + " >= " + fecQueryIni;
+    	vQuery = vQuery + "  and " + etl.getFIELDKEY() + " < " + fecQueryFin;
+    	
+    	return vQuery;
+    }
+    
+    private String genQueryExtract(ETL etl) {
     	try {
         	//Genera Query de Select DB Source y Dest
         	vSQLSource = "select ";
@@ -616,10 +469,10 @@ public class thExecETL extends Thread{
         	
         	logger.info("Query global de extracción generada: "+vSQLSource);
         	
-    		return true;
+    		return vSQLSource;
     	} catch (Exception e) {
     		logger.error("Error generando Query Extraccion..."+e.getMessage());
-    		return false;
+    		return null;
     	}
     }
     

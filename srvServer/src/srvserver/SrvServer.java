@@ -24,7 +24,7 @@ public class SrvServer {
     static srvRutinas gSub ;
     
     //Carga Clase log4
-    static Logger logger = Logger.getLogger("srvServer");
+    static Logger logger = Logger.getLogger("srv.server");
     
     public SrvServer() {
         /*

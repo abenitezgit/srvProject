@@ -11,13 +11,16 @@ import dataClass.ETL;
 import dataClass.EtlMatch;
 import dataClass.Ftp;
 import dataClass.Grupo;
+import dataClass.Interval;
 import dataClass.Process;
 import dataClass.TaskProcess;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +43,7 @@ public class thInscribeTask extends Thread{
     static MetaData metadata;
     
 //Carga Clase log4
-    static Logger logger = Logger.getLogger("thInscribeTask");   
+    static Logger logger = Logger.getLogger("srv.inscribeTask");   
     
     public thInscribeTask(globalAreaData m) {
         try {
@@ -98,7 +101,6 @@ public class thInscribeTask extends Thread{
 	    	try {
 	    		logger.info("Iniciando Thread thInscribeTask");
 	    		
-	    		
 	    		logger.info("Validando Conexion a MetaData...");
 	    		try {
 	    			/*
@@ -124,9 +126,11 @@ public class thInscribeTask extends Thread{
 		        gDatos.getLstActiveAgendas().clear();   //Lista para las agendas que deben activar grupos de procesos
 		        
 		        //Busca Agendas para Muestreo
+		        //Actualiza la lista global gDatos.getLstShowAgendas
 		        getShowAgendas();
 		        
 		        //Busca Agendas para Activar Grupos
+		        //Actualiza la lista global gDatos.getLstActiveAgendas
 		        getActiveAgendas();
 		        
 		        /**
@@ -139,40 +143,61 @@ public class thInscribeTask extends Thread{
 		
 		        if (numAgeActives>0) {
 		        	Agenda agenda;
-		        	
-		        	//keyMap:  grpID (Id del Grupo)
-		        	Map<String, Grupo> vMapGrupo;
-		        	
-			        //Para cada Agenda se buscaran los grupos y procesos correspondientes
-		        	for (int i=0; i<numAgeActives; i++) {
 
+		        	//Para cada Agenda se buscaran los grupos y procesos correspondientes
+		        	for (int i=0; i<numAgeActives; i++) {
+		        		
+		        		//Datos de la Agenda buscada
 		        		agenda = new Agenda();
 			        	agenda = gDatos.getLstActiveAgendas().get(i);
 			        	
-			        	logger.info("Buscando Grupos asociados a Agenda: "+agenda.getAgeID()+ " numSec: "+agenda.getNumSecExec());
+			        	Map<String, Grupo> vMapGrupo = new TreeMap<>();
+			        	Grupo grupo;
 			        	
-			        	try {
-			        		//Recupera un Map local de Grupos para la agenda en curso
-			        		//esta busqueda esta en un ciclo de agendas activas
-			        		
-			        		vMapGrupo = new TreeMap<>(genActiveGroup(agenda));
-			        		
-			        		//Para cada Grupo encontrado se inscribiran sus task
-			        		for (Map.Entry<String, Grupo> entry : vMapGrupo.entrySet()) {
-			        			inscribeGrupoExec(entry.getValue(), agenda.getNumSecExec());
+			        	//Genera Query Consulta de Grupos
+			        	String vSQLGroup = metadata.getSqlFindGroup(agenda.getAgeID());
+			        	ResultSet rs = (ResultSet) metadata.getQuery(vSQLGroup);
+			        	if (rs!=null) {
+			        		//Para cada grupo enconrtado de la agenda activa
+			        		while (rs.next()) {
+			        			if (!isGrupoInscrito(rs.getString("GRPID"), agenda.getNumSecExec())) {
+				        			logger.info("Se Inscribirá el Grupo:"+rs.getString("GRPID")+ " asociado a la agenda: "+agenda.getAgeID()+ " numSec: "+agenda.getNumSecExec());
+				        			grupo = new Grupo();
+				                    grupo.setGrpID(rs.getString("GRPID"));
+				                    grupo.setGrpDESC(rs.getString("GRPDESC"));
+				                    grupo.setCliID(rs.getString("CLIID"));
+				                    grupo.setCliDesc(rs.getString("CLIDESC"));
+				                    grupo.setHorDesc(rs.getString("HORDESC"));
+				                    grupo.setNumSecExec(agenda.getNumSecExec());
+				                    grupo.setMaxTimeExec(rs.getInt("MAXTIMEEXEC"));
+				                    
+				                    //Para cada grupo genera la lista de procesos
+				                    grupo.setLstProcess(genListaProcess(grupo));
+				                    
+				                    //Para cada grupo genera la lista de dependencias
+				                    grupo.setLstDepend(genListaDependences(grupo.getGrpID()));
+				                    
+				                    //Por cada grupo encontrado validar su incripcion de ejecución
+				                    //
+				                    inscribeGrupoExec(grupo, agenda.getNumSecExec());
+				                    
+				                    String keyMap = grupo.getGrpID();
+				                    
+				                    //Para cada grupo encontrado siempre actualiza la lista de grupos
+				                    vMapGrupo.put(keyMap, grupo);
+			        			}
 			        		}
+			        		rs.close();
 			        		
+			        		//Actualiza la Lista de Grupos encontrados
 			        		gDatos.updateMapGroup(vMapGrupo);
 			        		
-			        	} catch (Exception e) {
-			        		logger.error("Error generando Grupos Activos para agenda: "+agenda.getAgeID());
-			        	}
-			        }
-		        	
+			        	} //No hay grupos para esa agenda
+		        	}
 		        } else { //end if
 		        	logger.warn("No hay agendas para activar grupos");
 		        }
-	    		
+		        		    		
 		        //Cierra Conexiones
 		        if (isOpenMetaData) {
 		        	metadata.closeConnection();
@@ -348,53 +373,9 @@ public class thInscribeTask extends Thread{
 	        }
         }
         
-        private Map<String, Grupo> genActiveGroup(Agenda agenda) throws Exception{
-        	try {
-	        	Map<String, Grupo> vMapGrupo = new TreeMap<>();
-	        	Grupo grupo;
-	        	String vSQLGroup = metadata.getSqlFindGroup(agenda.getAgeID());
-	        	
-	        	logger.debug("Ejecutando Query: "+vSQLGroup);
-	        	
-	        	ResultSet rs = (ResultSet) metadata.getQuery(vSQLGroup);
-	        	
-	        	if (rs!=null) {
-	        		while (rs.next()) {
-	        			
-	        			logger.info("Se encontro el Grupo:"+rs.getString("GRPID")+ " asociado a la agenda: "+agenda.getAgeID()+ " numSec: "+agenda.getNumSecExec());
-	        			grupo = new Grupo();
-	                    grupo.setGrpID(rs.getString("GRPID"));
-	                    grupo.setGrpDESC(rs.getString("GRPDESC"));
-	                    grupo.setCliID(rs.getString("CLIID"));
-	                    grupo.setCliDesc(rs.getString("CLIDESC"));
-	                    grupo.setHorDesc(rs.getString("HORDESC"));
-	                    
-	                    //Para cada grupo genera la lista de procesos
-	                    grupo.setLstProcess(genListaProcess(grupo));
-	                    
-	                    //Para cada grupo genera la lista de dependencias
-	                    grupo.setLstDepend(genListaDependences(grupo.getGrpID()));
-	                    
-	                    //Por cada grupo encontrado validar su incripcion de ejecución
-	                    //
-	                    //inscribeGrupoExec(grupo, agenda.getNumSecExec());
-	                    
-	                    String keyMap = grupo.getGrpID();
-	                    
-	                    //Para cada grupo encontrado siempre actualiza la lista de grupos
-	                    vMapGrupo.put(keyMap, grupo);
-	        		}
-	        	} else {
-	        		logger.info("No se encontraton grupos asociados a la agenda: "+agenda.getAgeID());
-	        	}
-	        	
-	        	return vMapGrupo;
-	        	
-        	} catch (Exception e) {
-        		logger.error("Error en genActiveGroupNew...: "+e.getMessage());
-        		return null;
-        	}
-        	
+        private boolean isGrupoInscrito(String vGrpID, String vNumSecExec) throws Exception {
+        	String vSQL = metadata.getSqlFindGrupoExec(vGrpID, vNumSecExec);
+        	return metadata.ifExistRowKey(vSQL);
         }
         
         private void inscribeGrupoExec(Grupo grupo, String numSecExec) {
@@ -407,7 +388,7 @@ public class thInscribeTask extends Thread{
         			
         			//Inscribe el grupoExec
         			String vSqlIns = metadata.getSqlInsGrupoExec(grupo.getGrpID(), numSecExec);
-        			logger.debug("Squery insGrpExec: "+vSqlIns);
+        			logger.debug("query insGrpExec: "+vSqlIns);
         			int result = metadata.executeQuery(vSqlIns);
         			
         			if (result==1) {
@@ -486,6 +467,7 @@ public class thInscribeTask extends Thread{
 	        			process.setType(rs.getString("type"));
 	        			process.setCritical(rs.getInt("critical"));
 	        			process.setnOrder(rs.getInt("nOrder"));
+	        			process.setNumSecExec(grupo.getNumSecExec());
 	        			process.setParams(genDatalleProcess(process));
 	        			
 	        			vLstProcess.add(process);
@@ -526,8 +508,8 @@ public class thInscribeTask extends Thread{
             				
             				depend = new Dependence();
             				depend.setGrpID(rsDependences.getString("GRPID"));
-            				depend.setProcHijo(rsDependences.getInt("PROCHIJO"));
-            				depend.setProcPadre(rsDependences.getInt("PROCPADRE"));
+            				depend.setProcHijo(rsDependences.getString("PROCHIJO"));
+            				depend.setProcPadre(rsDependences.getString("PROCPADRE"));
             				depend.setCritical(rsDependences.getInt("CRITICAL"));
             				
             				vLstDepend.add(depend);
@@ -583,6 +565,10 @@ public class thInscribeTask extends Thread{
                 	etl = getParseEtlParam(rsProc);
                 }
                 
+                
+                //Asocia numSecExec
+                etl.setNUMSECEXEC(process.getNumSecExec());
+                
                 //Recupera Match de Campos del ETL
                 //Recupera detalle de Match de Campos para este ETL
                 logger.info("Recuperando Match de campos del ETL "+process.getProcID());
@@ -595,13 +581,274 @@ public class thInscribeTask extends Thread{
 
                 logger.info("Se recuperaron "+etl.getLstEtlMatch().size()+ " campos del Match ETL "+process.getProcID());
                 
-	    		return etl;
+                /**
+                 * Procesando Intervalos del ETL
+                 */
+                
+                //Recupera intervalos pendientes de ejecución para el proceso de ETL correspondiente
+                Map<String, Interval> vMapInterval = new TreeMap<>();
+                Interval interval;
+                
+                //Recupera Intervalos desde MD
+                vSQL = metadata.getSqlFindIntervalReady(etl.getETLID());
+                ResultSet rs = (ResultSet) metadata.getQuery(vSQL);
+                if (rs!=null) {
+                	while (rs.next()) {
+                		if (rs.getString("NUMSECEXEC")!=null) {
+	                		if (!isExistTaskForProcess(etl.getETLID(), rs.getString("NUMSECEXEC"))) {
+	                			interval = new Interval();
+	                			interval = getParseInterval(rs);
+	                			interval.setNumSecExec(etl.getNUMSECEXEC());
+	                			String keyMap = interval.getIntervalID();
+	                			vMapInterval.put(keyMap, interval);
+	                		}
+                		} else {
+                			interval = new Interval();
+                			interval = getParseInterval(rs);
+                			interval.setNumSecExec(etl.getNUMSECEXEC());
+                			String keyMap = interval.getIntervalID();
+                			vMapInterval.put(keyMap, interval);
+                		}
+                	}
+                	rs.close();
+                }
+                
+                
+                //Genera nuevos intervalos de extraccion
+               Map<String, Interval> newMapInterval = new TreeMap<>();
+               newMapInterval = genNewIntervals(etl);
+               
+               //Adiciona Intervalos Nuevos a vMapInterval
+               for (Map.Entry<String, Interval> entry : newMapInterval.entrySet()) {
+            	   if (!vMapInterval.containsKey(entry.getKey())&&!metadata.isExistIntervalMD(etl.getETLID(), entry.getKey())) {
+            		   if (!isExistTaskForInterval(etl.getETLID(), entry.getKey())) {
+            			   vMapInterval.put(entry.getKey(), entry.getValue());
+            		   }
+            	   }
+               }
+               
+               etl.setMapInterval(vMapInterval);
+                
+	    	return etl;
 	    		
 	    	} catch (Exception e) {
 	    		logger.error("Error en findETLDetail: "+e.getMessage());
 	    		return null;
 	    	}
 	    } //end ETL findEtlDetail()
+	    
+	    private boolean isExistTaskForInterval(String etlID, String intervalID) {
+	    	try {
+		    	boolean isExist = false;
+		    		Map<String, TaskProcess> vMapTask = new TreeMap<>(gDatos.getMapTask());
+			    	for (Map.Entry<String, TaskProcess> entry : vMapTask.entrySet()) {
+			    		String etlString = gSub.serializeObjectToJSon(entry.getValue().getParams(), false);
+			    		ETL etl = new ETL();
+			    		etl = (ETL) gSub.serializeJSonStringToObject(etlString, ETL.class);
+			    		Map<String, Interval> vMapInterval = new TreeMap<>();
+			    		vMapInterval = etl.getMapInterval();
+			    		for (Map.Entry<String, Interval> entryInt : vMapInterval.entrySet()) {
+			    			if (entryInt.getKey().equals(intervalID)) {
+			    				isExist = true;
+			    				break;
+			    			}
+			    		}
+			    	}
+		    	return isExist;
+	    	} catch (Exception e) {
+	    		logger.error("Error en isExistTaskForInterval...: "+e.getMessage());
+	    		return false;
+	    	}
+	    }
+	    
+	    private boolean isExistTaskForProcess(String etlID, String numSecExec) throws Exception{
+	    	boolean isFind=false;
+	    	Map<String, TaskProcess> vMapTask = new TreeMap<>(gDatos.getMapTask());
+	    	for (Map.Entry<String, TaskProcess> entry : vMapTask.entrySet()) {
+	    		if (entry.getValue().getProcID().equals(etlID)&&entry.getValue().getNumSecExec().equals(numSecExec)) {
+	    			isFind=true;
+	    			break;
+	    		}
+	    	}
+	    	return isFind;
+	    }
+	    
+	    private Map<String, Interval> genNewIntervals(ETL etl) {
+	    	try {
+	    		//Objeto local de MapInterval
+	    		Map<String, Interval> vMapInterval = new TreeMap<>();
+	    			    		
+		        //Extre Fecha Actual
+		        Date today;
+		        Date fecGap;
+		        Date fecIni;
+		        Date fecItera;
+		        Date fecIntervalIni;
+		        Date fecIntervalFin;
+		
+		        @SuppressWarnings("unused")
+				int MinItera;
+		        int HoraItera;
+		        int DiaItera;
+		        int MesItera;
+		        int AnoItera;
+		
+		        long numInterval;
+		        String localIntervalID;
+		        @SuppressWarnings("unused")
+				String todayChar;
+
+
+		        //Setea Fecha Actual
+		        //
+		        today = new Date();
+		        
+		        //Variables del Objeto ETL
+		        //
+		        int vTimeGap = etl.getTIMEGAP();
+		        int vTimePeriod = etl.getTIMEPERIOD();
+		        int vTimeGen = etl.getTIMEGEN();
+		        String vUnitMeasure = etl.getUNITMEASURE();
+		        String vETLID = etl.getETLID();
+	            
+		        //Setea Fecha GAP - Desface de tiempo en extraccion
+		        //
+		        Calendar c = Calendar.getInstance();
+		        c.add(Calendar.MINUTE, -(vTimeGap+vTimePeriod));
+		        fecGap = c.getTime();
+
+		        //Setea Fecha Inicio Inscripcion/Revision de Intervalos
+		        //
+		
+		        c.setTime(today);
+		        c.add(Calendar.MINUTE, -vTimeGen);
+		        fecIni = c.getTime();
+
+		        logger.info("Datos del ETLID: "+vETLID);
+		        logger.info("Fecha Actual: "+ today);
+		        logger.info("Fecha GAP   : "+ fecGap);
+		        logger.info("Fecha IniIns: "+ fecIni);
+	        
+		        fecItera = fecIni;
+		        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+		        SimpleDateFormat sdfToday = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		        String IntervalIni;
+		        String IntervalFin;
+		        Interval interval;
+		        String keyMap;
+	        
+		        while (fecItera.compareTo(fecGap) < 0) {
+		            //Crea Objecto Interval
+		            //
+		            interval = new Interval();
+		
+		            //Extrae Intervalo para Fecha fecItera
+		            //
+		            c.setTime(fecItera);
+		            AnoItera = c.get(Calendar.YEAR);
+		            MesItera = c.get(Calendar.MONTH);
+		            DiaItera = c.get(Calendar.DAY_OF_MONTH);
+		            HoraItera = c.get(Calendar.HOUR_OF_DAY);
+		            MinItera = c.get(Calendar.MINUTE);
+		
+		            //Valida si el intervalo de extraccion (cETL_INTERVALUNIDAD) es por:
+		            //  Minutos     : 0
+		            //  Horas       : 1
+		            //  Dias        : 2
+		            //  Semanas     : 3
+		            //  Mensuales   : 4
+		            //  Anuales     : 5
+		
+		            switch (vUnitMeasure) {
+		                case "MINUTE":
+		                    fecIntervalIni = null;
+		                    fecIntervalFin = null;
+		                    numInterval = 60/vTimePeriod;
+		                    for (int i=1;i<=numInterval;i++) {
+		                        c.set(AnoItera, MesItera, DiaItera, HoraItera, (i)*vTimePeriod,0);
+		                        fecIntervalFin = c.getTime();
+		                        if (fecIntervalFin.compareTo(fecItera) >0 ) {
+		                            c.set(AnoItera, MesItera, DiaItera, HoraItera, (i-1)*vTimePeriod,0);
+		                            fecIntervalIni = c.getTime();
+		                            break;
+		                        }
+		                    }
+		                    c.setTime(fecItera);
+		                    c.add(Calendar.MINUTE, vTimePeriod);
+		                    fecItera = c.getTime();
+		
+		
+		                    IntervalIni = sdf.format(fecIntervalIni);
+		                    IntervalFin = sdf.format(fecIntervalFin);
+		                    localIntervalID = IntervalIni+'-'+IntervalFin;
+		
+		                    interval.setIntervalID(localIntervalID);
+		                    interval.setStatus("Ready");
+		                    interval.setFecIns(sdfToday.format(today));
+		                    interval.setFecUpdate(sdfToday.format(today));
+		                    interval.setFecIni(IntervalIni);
+		                    interval.setFecFin(IntervalFin);
+		                    interval.setNumSecExec(etl.getNUMSECEXEC());
+		
+		                    keyMap = interval.getIntervalID();
+		                    if (!vMapInterval.containsKey(keyMap)) {
+		                    	vMapInterval.put(keyMap, interval);
+		                    	logger.info("Se inscribió intrevalID: "+keyMap+ " para el ETL: "+ etl.getETLID());
+		                    }
+		
+		                    break;
+		
+		                    case "HOUR":
+		                        fecIntervalIni = null;
+		                        fecIntervalFin = null;
+		                        numInterval = 24/vTimePeriod;
+		                        for (int i=1;i<=numInterval;i++) {
+		                            c.set(AnoItera, MesItera, DiaItera, (i)*vTimePeriod, 0, 0);
+		                            fecIntervalFin = c.getTime();
+		                            if (fecIntervalFin.compareTo(fecItera) >0 ) {
+		                                c.set(AnoItera, MesItera, DiaItera, (i-1)*vTimePeriod, 0, 0);
+		                                fecIntervalIni = c.getTime();
+		                                break;
+		                            }
+		                        }
+		                        c.setTime(fecItera);
+		                        c.add(Calendar.HOUR_OF_DAY, vTimePeriod);
+		                        fecItera = c.getTime();
+		
+		                        IntervalIni = sdf.format(fecIntervalIni);
+		                        IntervalFin = sdf.format(fecIntervalFin);
+		                        localIntervalID = IntervalIni+'-'+IntervalFin;                    
+		
+		                        interval.setIntervalID(localIntervalID);
+		                        interval.setStatus("Ready");
+		                        interval.setFecIns(sdfToday.format(today));
+		                        interval.setFecUpdate(sdfToday.format(today));
+		                        interval.setFecIni(IntervalIni);
+		                        interval.setFecFin(IntervalFin);
+		                        interval.setNumSecExec(etl.getNUMSECEXEC());
+		
+			                    keyMap = interval.getIntervalID();
+			                    if (!vMapInterval.containsKey(keyMap)) {
+			                    	vMapInterval.put(keyMap, interval);
+			                    	logger.info("Se inscribió intrevalID: "+keyMap+ " para el ETL: "+ etl.getETLID());
+			                    }
+		
+		                        break;
+		
+		                    case "2":
+		                    case "3":
+		                    case "4":
+		                    case "5":
+		                    default:
+		                } //end switch
+		            } //end while
+		        return vMapInterval;
+	    	} catch (Exception e) {
+	    		logger.error("Error generando intervalos faltantes..."+e.getMessage());
+	    		return null;
+	    	}
+	    }
+
 	    
 	    private Ftp findFtpDetail(Process process) {
 	    	try {
@@ -706,6 +953,21 @@ public class thInscribeTask extends Thread{
 	    		}
 	    	}
 	    	return ftp;
+	    }
+	    
+	    private Interval getParseInterval(ResultSet rs) throws Exception {
+	    	Interval interval = new Interval();
+	    	interval.setFecFin(rs.getString("FECFIN"));
+	    	interval.setFecIni(rs.getString("FECINI"));
+	    	interval.setFecIns(rs.getString("FECINS"));
+	    	interval.setFecUpdate(rs.getString("FECUPDATE"));
+	    	interval.setIntentos(rs.getInt("INTENTOS"));
+	    	interval.setIntervalID(rs.getString("INTERVALID"));
+	    	interval.setRowsLoad(rs.getInt("ROWSLOAD"));
+	    	interval.setRowsRead(rs.getInt("ROWSREAD"));
+	    	interval.setStatus(rs.getString("STATUS"));
+	    	interval.setuStatus(rs.getString("USTATUS"));
+	    	return interval;
 	    }
     
     	private ETL getParseEtlParam(ResultSet rs) throws Exception {
@@ -819,14 +1081,8 @@ public class thInscribeTask extends Thread{
                 if (rs.getString("DUSERTYPE")!=null) {
                     etl.setDUSERTYPE(rs.getString("DUSERTYPE")); 
                 }
-                if (rs.getString("LASTNUMSECEXEC")!=null) {
-                    etl.setLASTNUMSECEXEC(rs.getString("LASTNUMSECEXEC")); 
-                }
     		}
     		return etl;
     	}
-    	
-    	
-    	
     } //class
 }

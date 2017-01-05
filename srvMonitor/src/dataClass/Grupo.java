@@ -17,13 +17,32 @@ public class Grupo {
     String grpDESC;
     String cliID;
     String cliDesc;
-    String horDesc;    
+    String horDesc;
+    String numSecExec;
+    int maxTimeExec;
     List<Process> lstProcess = new ArrayList<>();
     List<Dependence> lstDepend = new ArrayList<>();
 
     //Getter and Setter
+    
 	public List<Dependence> getLstDepend() {
 		return lstDepend;
+	}
+
+	public int getMaxTimeExec() {
+		return maxTimeExec;
+	}
+
+	public void setMaxTimeExec(int maxTimeExec) {
+		this.maxTimeExec = maxTimeExec;
+	}
+
+	public String getNumSecExec() {
+		return numSecExec;
+	}
+
+	public void setNumSecExec(String numSecExec) {
+		this.numSecExec = numSecExec;
 	}
 
 	public String getCliID() {

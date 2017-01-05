@@ -258,7 +258,7 @@ public class MetaData {
     	return vSQL;
     }
     
-    public String getSqlFindInterval(String etlID, String numSecExec, String intervalID) {
+    public String getSqlFindInterval(String etlID, String intervalID) {
     	String vSQL=null;
     	switch (gDatos.getServerInfo().getDbType()) {
     		case "ORA":
@@ -273,7 +273,6 @@ public class MetaData {
     						" 		 tb_etlInterval " +
     						" where " +
     						" 		 etlID='" + etlID + "' " +
-    						"		 and numSecExec='" + numSecExec + "' " +
 							"		 and intervalID='" + intervalID + "' ";
     						
     			break;
@@ -336,7 +335,7 @@ public class MetaData {
 
     }
     
-    public String getSqlFindETLHuerfanInterval(String ETLID) {
+    public String getSqlFindIntervalReady(String ETLID) {
     	switch (gDatos.getServerInfo().getDbType()) {
     	case "ORA":
             return  null;
@@ -348,13 +347,12 @@ public class MetaData {
                     "  FECINS, FECUPDATE, " +
                     "  STATUS, USTATUS, " +
                     "  ROWSLOAD, ROWSREAD, " +
-                    "  INTENTOS, FECINI, FECFIN " +
+                    "  INTENTOS, FECINI, FECFIN, NUMSECEXEC " +
                     "from  " +
                     "  tb_etlInterval " +
                     "where " +
-                    "  ETLID='"+ ETLID  +"' " +
-                    "  And STATUS='Ready' " + 
-                    "  And numSecExec is null";
+                    "  ETLID='"+ ETLID  +"' " + 
+                    "  AND status='Ready'";
 		default:
 			return null;
     	}    	
@@ -486,6 +484,29 @@ public class MetaData {
     	return vSQL;
     }
     
+    public boolean isExistIntervalMD(String etlID, String intervalID) {
+    	boolean isExistInterval = false;
+    	String vSQL;
+    	switch (gDatos.getServerInfo().getDbType()) {
+			case "ORA":
+				break;
+			case "SQL":
+				break;
+			case "mySQL":
+				try {
+					vSQL = "select * from tb_etlInterval where etlID='"+ etlID + "' and intervalID='"+ intervalID + "'";
+					isExistInterval = myConn.isExistRowKey(vSQL);
+				} catch (Exception e) {
+					logger.error("Error en isExistIntervalMD...: "+e.getMessage());
+				}
+				break;
+			default:
+				break;
+    	
+    	}
+    	return isExistInterval;
+    }
+    
     public boolean ifExistRowKey(String vSQL) {
     	boolean isExistRow = false;
     	switch (gDatos.getServerInfo().getDbType()) {
@@ -514,7 +535,7 @@ public class MetaData {
     		case "SQL":
     			return null;
     		case "mySQL":
-    			return  " insert into tb_grpExec (grpID, numSecExec, status, uFecIns, uFecExec, typeExec) " +
+    			return  " insert into tb_grpExec (grpID, numSecExec, status, fecIns, fecUpdate, typeExec) " +
     					"	values ( " +
 						" '"+ vGroupID + "', " + 
 						" '"+ vNumSecExec + "', " +
@@ -540,7 +561,7 @@ public class MetaData {
 						" 	tb_grpExec " +
 						" where " +
 						" 	grpID='"+ vGroupID + "' " +
-						"	and numSecExec = '"+ vNumSecExec + "' ";
+						"   and numSecExec='"+ vNumSecExec + "'";
 			default:
 				return null;
     	}
@@ -550,7 +571,7 @@ public class MetaData {
     	String vSQL="";
     	switch (gDatos.getServerInfo().getDbType()) {
     	case "ORA":
-            vSQL =  "select gr.GRPID, gr.GRPDESC, gr.CLIID, cl.cliDesc, ho.horDesc " +
+            vSQL =  "select gr.GRPID, gr.GRPDESC, gr.CLIID, cl.cliDesc, ho.horDesc, gr.maxTimeExec " +
                     "from " +
                     "  process.tb_group gr, " +
                     "  process.tb_schedDiary ha, " +
@@ -572,7 +593,7 @@ public class MetaData {
                     "  and ha.HORENABLE = 1 ";
     		break;
     	case "SQL":
-            vSQL =  "select gr.GRPID, gr.GRPDESC, gr.CLIID, cl.cliDesc, ho.horDesc " +
+            vSQL =  "select gr.GRPID, gr.GRPDESC, gr.CLIID, cl.cliDesc, ho.horDesc, gr.maxTimeExec " +
                     "from " +
                     "  tb_group gr, " +
                     "  tb_schedDiary ha, " +
@@ -594,7 +615,7 @@ public class MetaData {
                     "  and ha.HORENABLE = 1 ";
     		break;
     	case "mySQL":
-            vSQL =  "select gr.GRPID, gr.GRPDESC, gr.CLIID, cl.cliDesc, ho.horDesc " +
+            vSQL =  "select gr.GRPID, gr.GRPDESC, gr.CLIID, cl.cliDesc, ho.horDesc, gr.maxTimeExec " +
                     "from " +
                     "  tb_group gr, " +
                     "  tb_schedDiary ha, " +

@@ -53,22 +53,22 @@ public class thExecFTP extends Thread{
         
         public boolean isValidParam(Map<String, Object> map) {
             try {
-                dftp.setID((String) map.get("ftpID"));
-                dftp.setDesc((String) map.get("ftpDesc"));
-                dftp.setDestFile((String) map.get("ftpDestFile"));
-                dftp.setDestIsFtp((boolean) map.get("ftpDestIsFtp"));
-                dftp.setDestIsPattern((boolean) map.get("ftpDestIsPattern"));
-                dftp.setDestPassID((String) map.get("ftpDestPassID"));
-                dftp.setDestPath((String) map.get("ftpDestPath"));
-                dftp.setDestServerID((String) map.get("ftpDestServerID"));
-                dftp.setDestUserID((String) map.get("ftpDestUserID"));
-                dftp.setSourceFile((String) map.get("ftpSourceFile"));
-                dftp.setSourceIsFtp((boolean) map.get("ftpSourceIsFtp"));
-                dftp.setSourceIsPattern((boolean) map.get("ftpSourceIsPattern"));
-                dftp.setSourcePassID((String) map.get("ftpSourcePassID"));
-                dftp.setSourcePath((String) map.get("ftpSourcePath"));
-                dftp.setSourceServerID((String) map.get("ftpSourceServerID"));
-                dftp.setSourceUserID((String) map.get("ftpSourceUserID"));
+//                dftp.setID((String) map.get("ftpID"));
+//                dftp.setDesc((String) map.get("ftpDesc"));
+//                dftp.setDestFile((String) map.get("ftpDestFile"));
+//                dftp.setDestIsFtp((boolean) map.get("ftpDestIsFtp"));
+//                dftp.setDestIsPattern((boolean) map.get("ftpDestIsPattern"));
+//                dftp.setDestPassID((String) map.get("ftpDestPassID"));
+//                dftp.setDestPath((String) map.get("ftpDestPath"));
+//                dftp.setDestServerID((String) map.get("ftpDestServerID"));
+//                dftp.setDestUserID((String) map.get("ftpDestUserID"));
+//                dftp.setSourceFile((String) map.get("ftpSourceFile"));
+//                dftp.setSourceIsFtp((boolean) map.get("ftpSourceIsFtp"));
+//                dftp.setSourceIsPattern((boolean) map.get("ftpSourceIsPattern"));
+//                dftp.setSourcePassID((String) map.get("ftpSourcePassID"));
+//                dftp.setSourcePath((String) map.get("ftpSourcePath"));
+//                dftp.setSourceServerID((String) map.get("ftpSourceServerID"));
+//                dftp.setSourceUserID((String) map.get("ftpSourceUserID"));
                 return true;
             } catch (Exception e) {
                 logger.error("Error en isValidParam..."+e.getMessage());

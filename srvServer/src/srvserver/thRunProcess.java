@@ -89,7 +89,7 @@ public class thRunProcess extends Thread {
                     Map<String, TaskProcess> myMapTask = new TreeMap<>(gDatos.getMapTask());
                     
                     for (Map.Entry<String, TaskProcess> entry : myMapTask.entrySet()) {
-                    	if (entry.getValue().getStatus().equals("Assigned")) {
+                    	if (entry.getValue().getStatus().equals("Ready")) {
                     		switch (entry.getValue().getTypeProc()) {
 	                            case "OSP":
 	                                Thread thOSP = new thExecOSP(gDatos, entry.getValue());
@@ -117,7 +117,7 @@ public class thRunProcess extends Thread {
 	                                thFTP.start();
 	                                break;
 	                            case "ETL":
-	                                Thread thETL = new thExecETL2(gDatos, entry.getValue());
+	                                Thread thETL = new thExecETL(gDatos, entry.getValue());
 	                                thETL.setName("thExecETL-"+ entry.getKey());
 	                                gDatos.setRunningTaskProcess(entry.getKey());
 	                                logger.info("Iniciando thread: thExecETL-"+ entry.getKey());

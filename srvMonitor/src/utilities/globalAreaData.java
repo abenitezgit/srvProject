@@ -152,6 +152,8 @@ public class globalAreaData {
      */
     public void updateStatusMapTask(String keyMapTask, String status) {
     	try {
+    		getMapTask().get(keyMapTask).setSrvID("srv00001");
+    		
     		getMapTask().get(keyMapTask).setStatus(status);
     		getMapTask().get(keyMapTask).setUpdateTime(getDateNow());
     	} catch (Exception e) {

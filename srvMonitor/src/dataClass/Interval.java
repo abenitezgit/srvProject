@@ -12,6 +12,7 @@ package dataClass;
  */
 public class Interval {
     String intervalID;
+    String numSecExec;
     String status;
     String uStatus;
     String fecIns;
@@ -26,6 +27,14 @@ public class Interval {
     
     public String getuStatus() {
 		return uStatus;
+	}
+
+	public String getNumSecExec() {
+		return numSecExec;
+	}
+
+	public void setNumSecExec(String numSecExec) {
+		this.numSecExec = numSecExec;
 	}
 
 	public int getIntentos() {

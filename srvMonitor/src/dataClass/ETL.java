@@ -51,7 +51,7 @@ public class ETL {
     String DUSERNAME;
     String DUSERPASS;
     String DUSERTYPE;
-    String LASTNUMSECEXEC;
+    String NUMSECEXEC;
     
     List<EtlMatch> lstEtlMatch = new ArrayList<>();
     Map<String, Interval> mapInterval = new TreeMap<>();
@@ -59,21 +59,21 @@ public class ETL {
     //Getter and Setter
     //
 
-    public String getLASTNUMSECEXEC() {
-        return LASTNUMSECEXEC;
-    }
-
 	public Map<String, Interval> getMapInterval() {
 		return mapInterval;
+	}
+
+	public String getNUMSECEXEC() {
+		return NUMSECEXEC;
+	}
+
+	public void setNUMSECEXEC(String nUMSECEXEC) {
+		NUMSECEXEC = nUMSECEXEC;
 	}
 
 	public void setMapInterval(Map<String, Interval> mapInterval) {
 		this.mapInterval = mapInterval;
 	}
-
-	public void setLASTNUMSECEXEC(String LASTNUMSECEXEC) {
-        this.LASTNUMSECEXEC = LASTNUMSECEXEC;
-    }
 
     public List<EtlMatch> getLstEtlMatch() {
         return lstEtlMatch;

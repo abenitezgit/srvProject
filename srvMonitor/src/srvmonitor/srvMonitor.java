@@ -16,6 +16,7 @@ import java.util.TreeMap;
 
 import utilities.srvRutinas;
 import org.apache.log4j.Logger;
+import org.apache.log4j.Level;
 
 /**
  *
@@ -26,7 +27,7 @@ public class srvMonitor {
     static srvRutinas gSub;
     
     //Carga Clase log4
-    static Logger logger = Logger.getLogger("srvMonitor");
+    static Logger logger = Logger.getLogger("srv.monitor");
     
     public srvMonitor() {
         /*
@@ -38,6 +39,8 @@ public class srvMonitor {
 
     public static void main(String[] args) throws IOException {
         try {
+        	//Logger.getRootLogger().setLevel(Level.OFF); 
+        	
             //Instancia las Clases
             logger.info("Iniciando srvMonitor...");
             gDatos  = new globalAreaData();
@@ -178,7 +181,7 @@ public class srvMonitor {
                 if (!mapThread.get("thSubAsignaTask")) {
                 	logger.info(" Iniciando Thread thSubAsignaTask....");
                 	thAsignaTask.setName("thSubAsignaTask");
-                    //thAsignaTask.start();
+                    thAsignaTask.start();
                 } 
             } catch (Exception e) {
             	mapThread.replace("thSubAsignaTask", false);
@@ -211,7 +214,7 @@ public class srvMonitor {
                     	logger.info(" Iniciando Thread thSubUpdateStatus....normal...");
                     	thUpdateStatusDB = new thUpdateStatusDB(gDatos);  
                     	thUpdateStatusDB.setName("thSubUpdateStatus");
-                    	//thUpdateStatusDB.start();
+                    	thUpdateStatusDB.start();
                     } 
                 } catch (Exception e) {
                     mapThread.replace("thUpdateStatusDB", false);

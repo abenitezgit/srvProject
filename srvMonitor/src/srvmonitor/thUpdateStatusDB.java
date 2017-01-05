@@ -27,7 +27,7 @@ import utilities.srvRutinas;
 public class thUpdateStatusDB extends Thread {
     static srvRutinas gSub;
     static globalAreaData gDatos;
-    static Logger logger = Logger.getLogger("thUpdateStatusDB");
+    static Logger logger = Logger.getLogger("srv.updateStatusDB");
     
     //Carga constructor para inicializar los datos
     public thUpdateStatusDB(globalAreaData m) {
@@ -39,8 +39,8 @@ public class thUpdateStatusDB extends Thread {
     @Override
     public void run() {
         Timer timerMain = new Timer("thSubUpdateStatus");
-        timerMain.schedule(new mainKeepTask(), 1000, 10000);
-        logger.info("Se ha agendado thSubUpdateStatus cada 10 segundos");
+        timerMain.schedule(new mainKeepTask(), 1000, 40000);
+        logger.info("Se ha agendado thSubUpdateStatus cada 40 segundos");
     }
     
     
@@ -65,120 +65,75 @@ public class thUpdateStatusDB extends Thread {
         		/**
         		 * Actualiza Estado de las Task
         		 */
-        		logger.info("Total Task informados: "+gDatos.getMapTask().size());
+        		logger.info("Actualizando las Task en MD...");
+                logger.info("Total de tareas informadas: "+ gDatos.getMapTask().size());
+                logger.info("Total tareas en estado Ready: "+ gSub.getNumTaskStatus(gDatos.getMapTask(),"Ready"));
+                logger.info("Total tareas en estado Running: "+ gSub.getNumTaskStatus(gDatos.getMapTask(),"Running"));
+                logger.info("Total tareas en estado Abort: "+ gSub.getNumTaskStatus(gDatos.getMapTask(),"Abort"));
+                logger.info("Total tareas en estado Finished: "+ gSub.getNumTaskStatus(gDatos.getMapTask(),"Finished"));
+
         		
-//        		Map<String, TaskProcess> myMapTask = new TreeMap<>(gDatos.getMapTask());
-//                for (Map.Entry<String, TaskProcess> entry : myMapTask.entrySet()) {
-//                	if (entry.getValue().getStatus().equals("Finished")) {
-//                		if (isGrupoFinished(entry.getValue().getGrpID(), entry.getValue().getNumSecExec())) {
-//                			updateMDGrupoFinished(entry.getValue().getGrpID(), entry.getValue().getNumSecExec());
-//                			gDatos.getMapTask().remove(entry.getKey());
-//                		}
-//                	}
-//                }
-                
-                
-                /*
-                 * Actualiza Estado de los Intervalos
-                 * 
-                 */
+        		if (gDatos.getMapTask().size()>0) {
+        		
+	        		Map<String, TaskProcess> myMapTask = new TreeMap<>(gDatos.getMapTask());
+	                for (Map.Entry<String, TaskProcess> entry : myMapTask.entrySet()) {
+	                	
+	                	logger.info("Analizando la Tarea: "+entry.getKey());
+	                	logger.info("Status actual: "+entry.getValue().getStatus());
+	                	
+	                	switch (entry.getValue().getStatus()) {
+	                		case "Finished":
+	                			logger.info("Validando si todas las Tareas del Grupo finalizaron...");
+		                		if (isGrupoFinished(entry.getValue().getGrpID(), entry.getValue().getNumSecExec())) {
+		                			updateMDGrupoFinished(entry.getValue().getGrpID(), entry.getValue().getNumSecExec());
+		                			gDatos.getMapTask().remove(entry.getKey());
+		                		}
+		                		break;
+	                		case "Running":
+	                			logger.info("Validando si tiempo de ejecucion del grupo esta expirado...");
 
-            	logger.info("Total de intervalos para actualizar: "+gDatos.getMapInterval().size());
-            	
-            	Map<String, Interval> myMapInterval = new TreeMap<>(gDatos.getMapInterval());
-            	for (Map.Entry<String, Interval> entry : myMapInterval.entrySet()) {
-            		
-            		/**
-            		 * Busca si este IntevalID existe en DB
-            		 */
-            		logger.info("Buscando Intervalo: "+entry.getKey());
-
-        			String etlID	  = entry.getValue().getETLID();
-            		String intervalID = entry.getValue().getIntervalID();
-            		
-            		boolean swExiste = false;
-            		
-            		String vSQL = md.getSqlFindInterval(etlID, numSecExec, intervalID);
-            		ResultSet rs = (ResultSet) md.getQuery(vSQL);
-            		if (rs!=null) {
-            			if (rs.next()) {
-            				rs.close();
-            				swExiste = true;
-            			} else {
-                			//No existe en MD
-                			//se debe insertar
-            			}
-            		} else {
-            			//No existe en MD
-            			//se debe insertar
-            		}
-            		
-            		if (swExiste) {
-
-            			PreparedStatement psUpdate = null;
-        				psUpdate = md.getConnection().prepareStatement(
-        						"update tb_etlInterval set " +
-								" status=?," +
-								" ustatus=?," +
-								" fecins=?," +
-								" fecupdate=?," +
-								" fecIni=?," +
-								" fecFin=?," +
-								" rowsLoad=?, " +
-								" rowsRead=? "  +
-								" where etlID='"+etlID+"'" + 
-								" and intervalID='"+intervalID+"'");
-                    				
-        				psUpdate.setString(1, entry.getValue().getStatus());
-        				psUpdate.setString(2, entry.getValue().getuStatus());
-        				psUpdate.setString(3, entry.getValue().getFecIns());
-        				psUpdate.setString(4, entry.getValue().getFecUpdate());
-        				psUpdate.setString(5, entry.getValue().getFecIni());
-        				psUpdate.setString(6, entry.getValue().getFecFin());
-        				psUpdate.setInt(7, entry.getValue().getRowsLoad());
-        				psUpdate.setInt(8, entry.getValue().getRowsRead());
-                    				
-        				int valor = psUpdate.executeUpdate();
-        				psUpdate.close();
-                    				
-        				logger.info("Se actualizó intervalo en MD: "+entry.getKey());
-        				//Eliminando Intervalo del MapInterval si su estado es Finished
-        				if (entry.getValue().getStatus().equals("Finished")) {
-        					gDatos.getMapInterval().remove(entry.getKey());
-        				}
-                    				
-            		} else {
-            			
-        				PreparedStatement psInsertar = null;
-        				psInsertar =  md.getConnection().prepareStatement(
-								"insert into tb_etlInterval "
-								+ " ( " 
-								+ " etlID, numsecexec, intervalID, fecIns, fecUpdate, status, ustatus, rowsLoad, rowsRead, intentos, fecIni, fecFin" 
-								+ " ) VALUES ( " 
-								+ " ?,?,?,?,?,?,?,?,?,?,?,? ) "
-								);
-        				psInsertar.setString(1, entry.getValue().getETLID());
-        				psInsertar.setString(2, entry.getValue().getNumSecExec());
-        				psInsertar.setString(3, entry.getValue().getIntervalID());
-        				psInsertar.setString(4, entry.getValue().getFecIns());
-        				psInsertar.setString(5, entry.getValue().getFecUpdate());
-        				psInsertar.setString(6, entry.getValue().getStatus());
-        				psInsertar.setString(7, entry.getValue().getuStatus());
-        				psInsertar.setInt(8, entry.getValue().getRowsLoad());
-        				psInsertar.setInt(9, entry.getValue().getRowsRead());
-        				psInsertar.setInt(10, entry.getValue().getIntentos());
-        				psInsertar.setString(11, entry.getValue().getFecIni());
-        				psInsertar.setString(12, entry.getValue().getFecFin());
-
-    					int valor = psInsertar.executeUpdate();
-                					
-    					logger.info("Se insertó intervalo en MD: "+entry.getKey());
-
-        			} 
-            	} //end for
+	                			logger.info("Valida que status grupo ejecucion este en Running...");
+	                			updateMDGrupoStatus(entry.getValue().getGrpID(), entry.getValue().getNumSecExec(),"Running");
+	                			
+	                			break;
+	                		case "Ready":
+	                			logger.info("Validando si tiempo de ejecucion del grupo esta expirado...");
+	                			
+	                	}
+	                	
+	                	/**
+	                	 * Actualiza intervalos informados para cada task del tipo ETL
+	                	 */
+	                	switch (entry.getValue().getTypeProc()) {
+	                		case "ETL":
+	                			
+	                			logger.info("Validando la actualización de intervalos del proceso...");
+	                			String etlString = gSub.serializeObjectToJSon(entry.getValue().getParams(), false);
+	                			ETL etl = new ETL();
+	                			etl = (ETL) gSub.serializeJSonStringToObject(etlString, ETL.class);
+	                			
+	                			//Recupera el MapInterval
+	                			Map<String, Interval> myMapInterval = new TreeMap<>(etl.getMapInterval());
+	                			
+	                			logger.info("Total intervalos del proceso: "+myMapInterval.size());
+	                			
+	                			for (Map.Entry<String, Interval> entryInt : myMapInterval.entrySet()) {
+	                				updateMDInterval(etl.getETLID(), entryInt.getValue());
+	                			}
+	                			
+	                			break;
+	            			default:
+	            				break;
+	                	}
+	                }
+	                
+	        	} else { //end if exist MapTask
+	        		logger.warn("No hay Tareas para Actualizar");
+	        	}
         	} else { //end if is md connected 
         		logger.error("No es posible conctarse a MD");
         	}
+        		
         	md.closeConnection();
         	
         	logger.info("Termino Thread thSubUpdateStatus...");
@@ -187,14 +142,142 @@ public class thUpdateStatusDB extends Thread {
     	}
         }
         
+        private void updateMDInterval(String etlID, Interval interval) {
+        	try {
+	        	MetaData md = new MetaData(gDatos);
+	        	
+	    		/**
+	    		 * Busca si este IntevalID existe en DB
+	    		 */
+	    		
+	
+	    		boolean swExiste = false;
+	    		
+	    		String vSQL = md.getSqlFindInterval(etlID, interval.getIntervalID());
+	    		String vStatus="";
+	    		ResultSet rs = (ResultSet) md.getQuery(vSQL);
+	    		if (rs!=null) {
+	    			if (rs.next()) {
+	    				vStatus = rs.getString("STATUS");
+	    				rs.close();
+	    				swExiste = true;
+	    			} else {
+	        			//No existe en MD
+	        			//se debe insertar
+	    			}
+	    		} else {
+	    			//No existe en MD
+	    			//se debe insertar
+	    		}
+	    		
+	    		if (swExiste) {
+	    			
+	    			if (!interval.getStatus().equals(vStatus)) {
+	    			
+		    			logger.info("Actualizando Intervalo: "+ etlID + ":" + interval.getIntervalID());
+		
+		    			PreparedStatement psUpdate = null;
+						psUpdate = md.getConnection().prepareStatement(
+								"update tb_etlInterval set " +
+								" numSecExec=?," +
+								" status=?," +
+								" ustatus=?," +
+								" fecins=?," +
+								" fecupdate=?," +
+								" fecIni=?," +
+								" fecFin=?," +
+								" rowsLoad=?, " +
+								" rowsRead=? "  +
+								" where etlID='"+etlID+"' " + 
+								" and intervalID='"+interval.getIntervalID()+"' " +
+								" and status!='Finished'");
+		            				
+						psUpdate.setString(1, interval.getNumSecExec());
+						psUpdate.setString(2, interval.getStatus());
+						psUpdate.setString(3, interval.getuStatus());
+						psUpdate.setString(4, interval.getFecIns());
+						psUpdate.setString(5, interval.getFecUpdate());
+						psUpdate.setString(6, interval.getFecIni());
+						psUpdate.setString(7, interval.getFecFin());
+						psUpdate.setInt(8, interval.getRowsLoad());
+						psUpdate.setInt(9, interval.getRowsRead());
+		            				
+						int valor = psUpdate.executeUpdate();
+						
+						if (valor!=1) {
+							logger.error("No pudo actualizar status intervalo: "+ etlID + ":" + interval.getIntervalID());
+						}
+						
+						psUpdate.close();
+	    			}
+	            				
+	    		} else {
+	    			
+	    			logger.info("Insertando intervalo:  "+ etlID + ":" + interval.getIntervalID());
+	    			
+					PreparedStatement psInsertar = null;
+					psInsertar =  md.getConnection().prepareStatement(
+							"insert into tb_etlInterval "
+							+ " ( " 
+							+ " etlID, numsecexec, intervalID, fecIns, fecUpdate, status, ustatus, rowsLoad, rowsRead, intentos, fecIni, fecFin" 
+							+ " ) VALUES ( " 
+							+ " ?,?,?,?,?,?,?,?,?,?,?,? ) "
+							);
+					psInsertar.setString(1, etlID);
+					psInsertar.setString(2, interval.getNumSecExec());
+					psInsertar.setString(3, interval.getIntervalID());
+					psInsertar.setString(4, interval.getFecIns());
+					psInsertar.setString(5, interval.getFecUpdate());
+					psInsertar.setString(6, interval.getStatus());
+					psInsertar.setString(7, interval.getuStatus());
+					psInsertar.setInt(8, interval.getRowsLoad());
+					psInsertar.setInt(9, interval.getRowsRead());
+					psInsertar.setInt(10, interval.getIntentos());
+					psInsertar.setString(11, interval.getFecIni());
+					psInsertar.setString(12, interval.getFecFin());
+	
+					int valor = psInsertar.executeUpdate();
+					
+					if (valor!=1) {
+						logger.error("Error insertando intervalo: "+ etlID + ":" + interval.getIntervalID());
+					}
+				} 
+	        	md.closeConnection();
+        	} catch (Exception e) {
+        		logger.error("Error en updateMDInterval...: "+ e.getMessage());
+        	}
+        }
+        
+        private void updateMDGrupoStatus(String vGrpID, String vNumSecExec, String status) {
+        	MetaData md = new MetaData(gDatos);
+        	String vSql = "update tb_grpExec set " +
+        					" status='"+ status + "', " +
+        					" fecUpdate= Now() "+ 
+		        			"where " +
+		    				"  grpID='"+ vGrpID + "' " +
+		        			"  and numSecExec = '"+ vNumSecExec + "'";
+        	int result = md.executeQuery(vSql);
+        	
+        	md.closeConnection();
+        }
+        
         private void updateMDGrupoFinished(String vGrpID, String vNumSecExec) {
         	MetaData md = new MetaData(gDatos);
-        	String vSql = "update tb_group set status='Sleeping', uStatus='Finished', LastNumSecExec='"+vNumSecExec+"' " +
-    				"  uFechaExec = Now() " +
-        			"where " +
-    				"  grpID='"+ vGrpID + "' ";
+        	String vSql = "update tb_grpExec " +
+        					" set status='Finished', fecUpdate = NOW() " +
+		        			"where " +
+		    				"  grpID='"+ vGrpID + "' " +
+		        			"  and numSecExec = '"+ vNumSecExec + "'";
         	int result = md.executeQuery(vSql);
         	logger.info("Finalizado el Grupo: "+vGrpID+":"+vNumSecExec+ " result: "+result);
+        	
+        	/**
+        	 * Registra Termino en Bitacora
+        	 */
+        	
+        	//pendiente
+        	
+        	md.closeConnection();
         }
         
         private boolean isGrupoFinished(String vGrpID, String vNumSecExec) {
@@ -202,7 +285,10 @@ public class thUpdateStatusDB extends Thread {
     		Map<String, TaskProcess> myMapTask = new TreeMap<>(gDatos.getMapTask());
             for (Map.Entry<String, TaskProcess> entry : myMapTask.entrySet()) {
             	if (entry.getValue().getGrpID().equals(vGrpID)&&entry.getValue().getNumSecExec().equals(vNumSecExec)) {
-	            	if (!entry.getValue().getStatus().equals("Finished")) {
+	            	if (!entry.getValue().getStatus().equals("Finished")
+	            			&&!entry.getValue().getStatus().equals("Error")
+	            			&&!entry.getValue().getStatus().equals("Abort")
+	            			) {
 	            		isFinished = false;
 	            		break;
 	            	}
