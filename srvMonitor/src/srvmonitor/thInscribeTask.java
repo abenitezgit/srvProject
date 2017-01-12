@@ -40,7 +40,7 @@ import utilities.srvRutinas;
 public class thInscribeTask extends Thread{
     static srvRutinas gSub;
     static globalAreaData gDatos;
-    static MetaData metadata;
+    static metaData metadata;
     
 //Carga Clase log4
     static Logger logger = Logger.getLogger("srv.inscribeTask");   
@@ -101,20 +101,8 @@ public class thInscribeTask extends Thread{
 	    	try {
 	    		logger.info("Iniciando Thread thInscribeTask");
 	    		
-	    		logger.info("Validando Conexion a MetaData...");
-	    		try {
-	    			/*
-	    			 * El objeto MetaData queda abierto para ser cerrado al final de las operaciones
-	    			 */
-	    			metadata = new MetaData(gDatos);
-	    			isOpenMetaData=true;
-	    			logger.info("Conectado a Metadata OK");
-	    			
-	    		} catch (Exception e) {
-	    			logger.error("Error de conexión a MetaData: "+e.getMessage());
-	    			isOpenMetaData=false;
-	    		}
-	    		
+	    		metadata = new metaData(gDatos);
+	    		metadata.openConnection();
 	    		
 	    		logger.info("Setea Datos del Calendar y Fechas ");
 	    		setDataCalendar();
@@ -199,7 +187,7 @@ public class thInscribeTask extends Thread{
 		        }
 		        		    		
 		        //Cierra Conexiones
-		        if (isOpenMetaData) {
+		        if (metadata.isConnected()) {
 		        	metadata.closeConnection();
 		        }
 	    		
@@ -207,9 +195,8 @@ public class thInscribeTask extends Thread{
 	    	} catch (Exception e) {
 	    		logger.error("Error Thread thSubActiveGroups: "+e.getMessage());
 	    		
-	    		if (isOpenMetaData) {
+	    		if (metadata.isConnected()) {
 	    			metadata.closeConnection();
-	    			isOpenMetaData=false;
 	    		}
 	    	}
 	    }
@@ -445,7 +432,6 @@ public class thInscribeTask extends Thread{
         	} catch (Exception e) {
         		logger.error("Error en inscribeGrupoExec...: "+e.getMessage());
         	}
-        	
         }
         
         private List<Process> genListaProcess(Grupo grupo) {
@@ -598,7 +584,10 @@ public class thInscribeTask extends Thread{
 	                		if (!isExistTaskForProcess(etl.getETLID(), rs.getString("NUMSECEXEC"))) {
 	                			interval = new Interval();
 	                			interval = getParseInterval(rs);
-	                			interval.setNumSecExec(etl.getNUMSECEXEC());
+	                			//interval.setNumSecExec(etl.getNUMSECEXEC());
+	                			interval.setStatus("Finished");
+	                			interval.setuStatus("Abort");
+	                			interval.setFecUpdate(gSub.getDateNow());
 	                			String keyMap = interval.getIntervalID();
 	                			vMapInterval.put(keyMap, interval);
 	                		}
@@ -967,6 +956,7 @@ public class thInscribeTask extends Thread{
 	    	interval.setRowsRead(rs.getInt("ROWSREAD"));
 	    	interval.setStatus(rs.getString("STATUS"));
 	    	interval.setuStatus(rs.getString("USTATUS"));
+	    	interval.setNumSecExec(rs.getString("NUMSECEXEC"));
 	    	return interval;
 	    }
     

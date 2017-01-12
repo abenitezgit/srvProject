@@ -10,10 +10,7 @@ import java.sql.ResultSet;
 import org.apache.log4j.Logger;
 
 import dataClass.Agenda;
-import dataClass.Grupo;
-import dataClass.TaskProcess;
 import utilities.globalAreaData;
-//import utilities.hbaseDB;
 import utilities.mysqlDB;
 import utilities.oracleDB;
 import utilities.sqlDB;
@@ -22,7 +19,7 @@ import utilities.sqlDB;
  *
  * @author andresbenitez
  */
-public class MetaData {
+public class metaData {
     static Logger logger = Logger.getLogger("MetaData");
     globalAreaData gDatos;
     
@@ -31,47 +28,39 @@ public class MetaData {
     //private hbaseDB hbConn;
     private mysqlDB myConn; 
     
-    public MetaData (globalAreaData m) {
+    public metaData (globalAreaData m) {
         gDatos = m;
-        
-        switch (gDatos.getServerInfo().getDbType()) {
-            case "ORA":
-                try {
-                    oraConn = new oracleDB(gDatos.getServerInfo().getDbHost(), gDatos.getServerInfo().getDbName(), gDatos.getServerInfo().getDbPort(), gDatos.getServerInfo().getDbUser(), gDatos.getServerInfo().getDbPass());
-                    oraConn.conectar();
-                    if (oraConn.getConnStatus()) {
-                        gDatos.getServerStatus().setIsValMetadataConnect(true);
-                    }
-                    else {
-                        gDatos.getServerStatus().setIsValMetadataConnect(false);
-                    }
-                } catch (Exception e) {
-                    logger.error("Error de conexion a MetaData: "+e.getMessage());
-                    gDatos.getServerStatus().setIsValMetadataConnect(false);
-                }
-                break;
-            case "mySQL":
-                try {
-                    myConn = new mysqlDB(gDatos.getServerInfo().getDbHost(), gDatos.getServerInfo().getDbName(), gDatos.getServerInfo().getDbPort(), gDatos.getServerInfo().getDbUser(), gDatos.getServerInfo().getDbPass());
-                    myConn.conectar();
-                    if (myConn.getConnStatus()) {
-                        gDatos.getServerStatus().setIsValMetadataConnect(true);
-                    }
-                    else {
-                        gDatos.getServerStatus().setIsValMetadataConnect(false);
-                    }
-                } catch (Exception e) {
-                    logger.error("Error de conexion a MetaData: "+e.getMessage());
-                    gDatos.getServerStatus().setIsValMetadataConnect(false);
-                }
-                break;
-            case "SQL":
-                break;
-            case "HBASE":
-                break;
-            default:
-                break;
-        }
+    }
+    
+    public void openConnection() {
+    	try {
+            switch (gDatos.getServerInfo().getDbType()) {
+	            case "ORA":
+	                try {
+	                    oraConn = new oracleDB(gDatos.getServerInfo().getDbHost(), gDatos.getServerInfo().getDbName(), gDatos.getServerInfo().getDbPort(), gDatos.getServerInfo().getDbUser(), gDatos.getServerInfo().getDbPass());
+	                    oraConn.conectar();
+	                } catch (Exception e) {
+	                    logger.error("Error de conexion a MetaData: "+e.getMessage());
+	                }
+	                break;
+	            case "mySQL":
+	                try {
+	                    myConn = new mysqlDB(gDatos.getServerInfo().getDbHost(), gDatos.getServerInfo().getDbName(), gDatos.getServerInfo().getDbPort(), gDatos.getServerInfo().getDbUser(), gDatos.getServerInfo().getDbPass());
+	                    myConn.conectar();
+	                } catch (Exception e) {
+	                    logger.error("Error de conexion a MetaData: "+e.getMessage());
+	                }
+	                break;
+	            case "SQL":
+	                break;
+	            case "HBASE":
+	                break;
+	            default:
+	                break;
+	        }
+    	} catch (Exception e) {
+    		logger.error("No puede abrir conección...: "+e.getMessage());
+    	}
     }
     
     public Connection getConnection() {
@@ -564,6 +553,39 @@ public class MetaData {
 						"   and numSecExec='"+ vNumSecExec + "'";
 			default:
 				return null;
+    	}
+    }
+    
+    public String genSqlUpdateStatusAbortGrpExec(String vGrpID, String vNumSecExec) {
+    	switch (gDatos.getServerInfo().getDbType()) {
+	    	case "ORA":
+	    		return null;  
+	    	case "SQL":
+	    		return null;  
+	    	case "mySQL":
+	    		return "update tb_grpExec " +
+								" set status='Finished', statEnd='Abort', fecUpdate=NOW() " +
+								" where " +
+								" 	grpID='"+ vGrpID + "' " +
+								"   and numSecExec='" + vNumSecExec + "'";
+			default:
+				return null;
+	    	}
+    }
+    
+    public String getSqlFindGrpExecHuerfans() {
+    	switch (gDatos.getServerInfo().getDbType()) {
+	    	case "ORA":
+	    		return null;
+	    	case "SQL":
+	    		return null;
+	    	case "mySQL":
+	    		return "select grpID, numSecExec, status, typeExec, statEnd, date_format(fecIns,'%Y-%m-%d %H:%i:%s') fecIns, date_format(fecUpdate,'%Y-%m-%d %H:%i:%s') fecUpdate " +
+    					" from tb_grpExec " +
+						" where " +
+    					" 	status in ('Ready','Running','Pending')";
+    		default:
+    			return null;
     	}
     }
     

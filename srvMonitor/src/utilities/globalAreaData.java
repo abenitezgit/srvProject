@@ -159,7 +159,6 @@ public class globalAreaData {
     	} catch (Exception e) {
     		logger.error("Error en updateStatusMapTask...: "+e.getMessage());
     	}
-    	
     }
     
     public synchronized void updateMapGrupo(Grupo grupo) throws Exception {
@@ -400,6 +399,7 @@ public class globalAreaData {
             serverInfo.setAgeShowHour(Integer.valueOf(fileConf.getProperty("ageShowHour")));
             serverInfo.setAgeGapMinute(Integer.valueOf(fileConf.getProperty("ageGapMinute")));
             serverInfo.setAuthKey(fileConf.getProperty("authKey"));
+            serverInfo.setTxpUpdateMD(Integer.valueOf(fileConf.getProperty("txpUpdateMD")));
             
             /**
              * Recupera Valores de acceso a Metadata

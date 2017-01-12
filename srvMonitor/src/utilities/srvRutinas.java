@@ -24,7 +24,7 @@ import org.codehaus.jackson.map.SerializationConfig;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import srvmonitor.MetaData;
+import srvmonitor.metaData;
 
 /**
  *
@@ -140,7 +140,7 @@ public class srvRutinas {
         JSONObject jHeader = new JSONObject();
         JSONObject jo;
         JSONArray ja = new JSONArray();
-        MetaData metadata = new MetaData(gDatos);
+        metaData metadata = new metaData(gDatos);
         try {
             if (metadata.isConnected()) {
                 String vSQL = "select * from process.tb_ftp where ftpEnable=1 order by ftpID";
@@ -363,7 +363,6 @@ public class srvRutinas {
     		logger.error("Error en getNumTaskStatus...: "+e.getMessage());
     		return 0;
     	}
-    	
     }
     
     public boolean updateStatusService(JSONObject jData) {
@@ -626,7 +625,7 @@ public class srvRutinas {
     public boolean getMDprocAssigned(String srvID)  {
         try {
         	logger.info("Buscando AssignedTypeProc desde Metadata para servicio: "+srvID);
-            MetaData metadata = new MetaData(gDatos);
+            metaData metadata = new metaData(gDatos);
             if (gDatos.getServerStatus().isIsValMetadataConnect()) {
                 JSONArray ja;
                 AssignedTypeProc assignedTypeProc = new AssignedTypeProc();
@@ -661,10 +660,10 @@ public class srvRutinas {
                             	gDatos.getMapAssignedTypeProc().put(srvID+":"+assignedTypeProc.getTypeProc(), assignedTypeProc);
                             }
                         }
+                        rs.close();
                     } else {
                     	logger.error("No hay AssignedTypeProc para servico "+srvID);
                     }
-                    rs.close();
                 }
                 metadata.closeConnection();
                 logger.info("Asignación recuperadas desde metadata : "+serializeObjectToJSon(gDatos.getMapAssignedTypeProc(), false));

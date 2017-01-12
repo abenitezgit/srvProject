@@ -19,14 +19,14 @@ import utilities.srvRutinas;
  *
  * @author andresbenitez
  */
-public class SrvServer {
+public class srvServer {
     static globalAreaData gDatos;
     static srvRutinas gSub ;
     
     //Carga Clase log4
     static Logger logger = Logger.getLogger("srv.server");
     
-    public SrvServer() {
+    public srvServer() {
         /*
             El constructor solo se ejecuta cuando la clase es instanciada desde otra.
             Cuando la clase posee un main() principal de ejecución, el constructor  no

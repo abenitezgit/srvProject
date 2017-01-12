@@ -40,12 +40,11 @@ public class thMonitorSocket extends Thread {
             String dAuth;
             JSONObject jHeader;
             JSONObject jData;
-            //int result;
             
             while (isSocketActive) {
                 Socket skCliente = skServidor.accept();
                 InputStream inpStr = skCliente.getInputStream();
-                DataInputStream dataInput = new DataInputStream( inpStr );
+                //DataInputStream dataInput = new DataInputStream( inpStr );
                 ObjectInputStream objInput = new ObjectInputStream(inpStr);
                 
                 //Espera Entrada
@@ -61,10 +60,9 @@ public class thMonitorSocket extends Thread {
                     dRequest = jHeader.getString("request");
 
                     if (dAuth.equals(gDatos.getServerInfo().getAuthKey())) {
-
+                    	logger.info("Recibiendo TX("+ dRequest +"): "+ jData.toString());
                         switch (dRequest) {
                             case "keepAlive":
-                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
                                 if (gSub.updateStatusService(jData.getJSONObject("serviceStatus"))) {
                                 	outputData = gSub.sendServiceInfo(jData.getJSONObject("serviceStatus").getString("srvID"));
                                 } else {
@@ -72,43 +70,33 @@ public class thMonitorSocket extends Thread {
                                 }
                                 break;
                             case "getDate":
-                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
                                 outputData = gSub.sendDate();
                                 break;
                             case "getGroups":
-                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
                                 outputData = gSub.sendGroups();
                                 break;
                             case "getTask":
-                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
                                 outputData = gSub.sendTask();
                                 break;
                             case "getGroup":
-                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
                                 outputData = gSub.sendGroup();
                                 break;
                             case "getStatus":
-                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
                                 outputData = gSub.sendStatusServices();
                                 break;
                             case "getGroupsActive":
-                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
                                 outputData = gSub.sendGroupActives();
                                 break;
                             case "getAgeShow":
-                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
                                 outputData = gSub.sendAgeShow();
                                 break;
                             case "putExecOSP":
-                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
                                 outputData = gSub.sendOkTX();
                                 break;
                             case "sendPing":
-                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
                                 outputData = "OK";
                                 break;
                             case "getFTPServices":
-                            	logger.info("Recibiendo TX("+dRequest+"): "+jData.toString());
                                 outputData = gSub.sendFTPservices("*");
                                 break;
                             default:
@@ -142,7 +130,6 @@ public class thMonitorSocket extends Thread {
                 //Cierra Todas las conexiones
                 //
                 inpStr.close();
-                dataInput.close();
                 ObjOutput.close();
                 objInput.close();
                 skCliente.close();

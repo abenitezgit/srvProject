@@ -17,6 +17,7 @@ public class ServerInfo {
     int txpSocket;
     int txpInscribe;
     int txpAsigna;
+    int txpUpdateMD;
     int srvPort;
     int ageShowHour;
     int ageGapMinute;
@@ -48,7 +49,15 @@ public class ServerInfo {
         return ageShowHour;
     }
 
-    public int getTxpInscribe() {
+    public int getTxpUpdateMD() {
+		return txpUpdateMD;
+	}
+
+	public void setTxpUpdateMD(int txpUpdateMD) {
+		this.txpUpdateMD = txpUpdateMD;
+	}
+
+	public int getTxpInscribe() {
 		return txpInscribe;
 	}
 

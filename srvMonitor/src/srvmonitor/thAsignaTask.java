@@ -44,7 +44,7 @@ public class thAsignaTask extends Thread{
     }
     
     class mainTask extends TimerTask{
-    	MetaData md;
+    	metaData md;
 
         @Override
         public void run() {
@@ -55,7 +55,8 @@ public class thAsignaTask extends Thread{
 	             * Establece conexión a Metadata
 	             */
 	            try {
-	            	md = new MetaData(gDatos);
+	            	md = new metaData(gDatos);
+	            	md.openConnection();
 	            } catch (Exception e) {
 	            	logger.error("No pudo conectarse a MetaData");
 	            }
