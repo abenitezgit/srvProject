@@ -625,8 +625,9 @@ public class srvRutinas {
     public boolean getMDprocAssigned(String srvID)  {
         try {
         	logger.info("Buscando AssignedTypeProc desde Metadata para servicio: "+srvID);
-            metaData metadata = new metaData(gDatos);
-            if (gDatos.getServerStatus().isIsValMetadataConnect()) {
+            metaData mdConn = new metaData(gDatos);
+            mdConn.openConnection();
+            if (mdConn.isConnected()) {
                 JSONArray ja;
                 AssignedTypeProc assignedTypeProc = new AssignedTypeProc();
 
@@ -634,7 +635,7 @@ public class srvRutinas {
                         + "     from tb_services "
                 		+ "     where srvID = '"+srvID+"'"
                         + "     order by srvID";
-                try (ResultSet rs = (ResultSet) metadata.getQuery(vSQL)) {
+                try (ResultSet rs = (ResultSet) mdConn.getQuery(vSQL)) {
                     if (rs!=null) {
                         while (rs.next()) {
 
@@ -665,7 +666,7 @@ public class srvRutinas {
                     	logger.error("No hay AssignedTypeProc para servico "+srvID);
                     }
                 }
-                metadata.closeConnection();
+                mdConn.closeConnection();
                 logger.info("Asignación recuperadas desde metadata : "+serializeObjectToJSon(gDatos.getMapAssignedTypeProc(), false));
             } else {
             	logger.warn("No fue validada la conexiona metadata recuperando AssignedTypeProc");

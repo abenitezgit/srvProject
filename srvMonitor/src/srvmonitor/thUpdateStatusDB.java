@@ -78,7 +78,7 @@ public class thUpdateStatusDB extends Thread {
                 		case "Finished":
                 			logger.info("Validando si todas las Tareas del Grupo finalizaron...");
 	                		if (isGrupoFinished(entry.getValue().getGrpID(), entry.getValue().getNumSecExec())) {
-	                			updateMDGrupoFinished(entry.getValue().getGrpID(), entry.getValue().getNumSecExec());
+	                			updateMDGrupoFinished(entry.getValue());
 	                			gDatos.getMapTask().remove(entry.getKey());
 	                		}
 	                		break;
@@ -367,16 +367,18 @@ public class thUpdateStatusDB extends Thread {
         	}
         }
         
-        private void updateMDGrupoFinished(String vGrpID, String vNumSecExec) {
+        private void updateMDGrupoFinished(TaskProcess task) {
         	metaData mdConn = new metaData(gDatos);
         	try {
 	        	mdConn.openConnection();
 	        	if (mdConn.isConnected()) {
 		        	String vSql = "update tb_grpExec " +
-		        					" set status='Finished', fecUpdate = NOW() " +
+		        					" set status='Finished', "
+		        					+ "   statEnd='" + task.getuStatus() + "', "
+		        					+ "	  fecUpdate = NOW() " +
 				        			"where " +
-				    				"  grpID='"+ vGrpID + "' " +
-				        			"  and numSecExec = '"+ vNumSecExec + "'";
+				    				"  grpID='"+ task.getGrpID() + "' " +
+				        			"  and numSecExec = '"+ task.getNumSecExec() + "'";
 		        	int result = mdConn.executeQuery(vSql);
 
 		        	/**
@@ -385,7 +387,7 @@ public class thUpdateStatusDB extends Thread {
 		        	
 		        	mdConn.closeConnection();
 		        	
-		        	logger.info("Finalizado el Grupo: "+vGrpID+":"+vNumSecExec+ " result: "+result);
+		        	logger.info("Finalizado el Grupo: "+task.getGrpID()+":"+task.getNumSecExec()+ " result: "+result);
 	        	} else {
 	        		logger.error("No es posible conectarse a metadata en updateMDGrupoFinished");
 	        	}

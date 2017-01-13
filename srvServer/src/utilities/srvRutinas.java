@@ -388,6 +388,8 @@ public class srvRutinas {
 	        		gDatos.getMapTask().put(key, newTask);
 	        	}
 	        	
+	        	
+	        	
 	            //try {
 					logger.info("Actualizada Task: " + entry.getKey()); // + ", valor=" + serializeObjectToJSon(gDatos.getMapTask().get(key), false));
 				//} catch (IOException e) {
@@ -396,7 +398,28 @@ public class srvRutinas {
 					//e.printStackTrace();
 				//}
 	        }
-	    	
+
+        	/**
+        	 * Valida si las task informadas como Finished ya fueron registras por srvMonitor y eliminadas
+        	 */
+        	Map<String, TaskProcess> newTask = new TreeMap<>(serviceStatus.getMapTask());
+        	Map<String, TaskProcess> updateTask = new TreeMap<>(gDatos.getMapTask());
+        	for (Map.Entry<String, TaskProcess> entry : updateTask.entrySet()) {
+        		if (newTask!=null) {
+        			if (!newTask.containsKey(entry.getKey())) {
+            			if (entry.getValue().getStatus().equals("Finished")) {
+            				logger.info("Eliminando Task: "+ entry.getKey());
+            				gDatos.getMapTask().remove(entry.getKey());
+            			}
+        			}
+        		} else {
+        			if (entry.getValue().getStatus().equals("Finished")) {
+        				logger.info("Eliminando Task: "+ entry.getKey());
+        				gDatos.getMapTask().remove(entry.getKey());
+        			}
+        		}
+        	}
+	        
 	    	/**
 	    	 * Analizar este tipo de actualizacion por posibles perdidas de sincronizacion
 	    	 */
