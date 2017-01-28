@@ -8,11 +8,13 @@ package utilities;
 import dataClass.AssignedTypeProc;
 import dataClass.ETL;
 import dataClass.Interval;
+import dataClass.MOV;
 import dataClass.ServiceStatus;
 import dataClass.TaskProcess;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.sql.Connection;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -24,7 +26,6 @@ import javax.management.Attribute;
 import javax.management.AttributeList;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.SerializationConfig;
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
@@ -49,15 +50,10 @@ public class srvRutinas {
     public srvRutinas(globalAreaData m) {
         try {
             gDatos = m;
-            gDatos.getServiceStatus().setIsLoadRutinas(true);
+            gDatos.getServiceStatus().setLoadRutinas(true);
         } catch (Exception e) {
-            gDatos.getServiceStatus().setIsLoadRutinas(false);
+            gDatos.getServiceStatus().setLoadRutinas(false);
         }
-    }
-    
-    
-    public void sysOutln(Object obj) {
-        System.out.println(obj);
     }
     
     public String getDateNow() {
@@ -67,7 +63,6 @@ public class srvRutinas {
             Date today;
             SimpleDateFormat formatter;
             formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            System.out.println(formatter.getTimeZone());
             today = new Date();
             return formatter.format(today);  
         } catch (Exception e) {
@@ -82,7 +77,6 @@ public class srvRutinas {
             Date today;
             SimpleDateFormat formatter;
             formatter = new SimpleDateFormat(xformat);
-            //System.out.println(formatter.getTimeZone());
             today = new Date();
             return formatter.format(today);  
         } catch (Exception e) {
@@ -148,8 +142,6 @@ public class srvRutinas {
     }
     
     public static double getProcessCpuLoad() throws Exception {
-
-        
         MBeanServer mbs    = ManagementFactory.getPlatformMBeanServer();
         ObjectName name    = ObjectName.getInstance("java.lang:type=OperatingSystem");
         AttributeList list = mbs.getAttributes(name, new String[]{ "ProcessCpuLoad" });
@@ -165,119 +157,7 @@ public class srvRutinas {
         return ((int)(value * 1000) / 10.0);
     }
     
-//    public List<PoolProcess> genLstProcessOfPool(String typeProc) {
-//        try {
-//            List<PoolProcess> lstProcess = gDatos.getLstPoolProcess().stream().filter(p -> p.getTypeProc().equals(typeProc)).collect(Collectors.toList());
-//            
-//            if (!lstProcess.isEmpty()) {
-//            
-//            }
-//            return lstProcess;
-//        } catch (Exception e) {
-//            logger.error("Error generando lista de procesos: "+typeProc);
-//            return null;
-//        }
-//    }
-
-//    public synchronized String updatePoolProcess(JSONObject jData) throws IOException {
-//        try {
-//            
-//            /**
-//             * Actualiza informacion que es recibida desde srvMonitor
-//             * Debe verificar nuevas asignaciones de procesos, detenciones, etc.
-//             */
-//            
-//            logger.debug("Data recibida para updatePoolProcess: "+jData.toString());
-//            
-//            JSONArray jArray = jData.getJSONArray("poolProcess");
-//            
-//            int numItems = jArray.length();
-//
-//            if (numItems>0) {
-// 
-//                PoolProcess poolProcess = new PoolProcess();
-//                
-//                @SuppressWarnings("unused")
-//				List<PoolProcess> lstPoolProcess = new ArrayList<>();
-//
-//                logger.info("Se han recibido: "+jArray.length()+" asignaciones de Ejecución de Procesos.");
-//            
-//                //Para cada proceso recibido
-//                //
-//                for (int i=0; i<jArray.length(); i++) {
-//                    poolProcess = (PoolProcess) serializeJSonStringToObject(jArray.getJSONObject(i).toString(), PoolProcess.class);
-//
-//                    //Extrae posicion en lista actual si es que existe
-//                    //
-//                    int indexPool;
-//                    if (poolProcess.getTypeProc().equals("ETL")) {
-//                        indexPool = gDatos.getIndexOfPoolProcess(poolProcess.getProcID(), poolProcess.getIntervalID());
-//                    } else {
-//                        indexPool = gDatos.getIndexOfPoolProcess(poolProcess.getProcID());
-//                    }
-//                    
-//                    /**
-//                     * Valida informacion de status que posee el proceso
-//                     */
-//                    switch (poolProcess.getStatus()) {
-//                        case "Assigned":
-//                            /**
-//                             * Valida Si ya se encuentra en pool.
-//                             *
-//                             */
-//                            if (indexPool!=-1) {
-//                                /**
-//                                 * Generar acciones de actualizacion
-//                                 * Pendientes.
-//                                 * (por ahora no hay accion si ya existe)
-//                                 */
-//                            
-//                            } else {
-//                                /**
-//                                 * No se encontro en pool
-//                                 * Se ingresará como nuevo.
-//                                 */
-//                                poolProcess.setStatus("Ready");
-//                                poolProcess.setUpdateTime(getDateNow());
-//                                gDatos.updateLstPoolProcess(indexPool, poolProcess, false);
-//                            }
-//                            break;
-//                        case "Stopped":
-//                            /**
-//                             * Valida Si ya se encuentra en pool.
-//                             *
-//                             */
-//                            if (indexPool!=-1) {
-//                                /**
-//                                 * Si actual status=Ready, se marcara como Released para ser devuelta al pool de control
-//                                 * del srvMOnitor.
-//                                 */
-//                            
-//                            } else {
-//                                /**
-//                                 * No se encontro en pool
-//                                 * No hay accion
-//                                 * Hubo algun problema de perdida del registro.
-//                                 */
-//                            }
-//                            break;
-//                        
-//                    } //Fin switch()
-//                    
-//                } //Fin for()
-//                //logger.info("Total de Ejecuciones de Procesos en lista PoolProcess: " + gDatos.getServiceStatus().getLstPoolProcess().size());
-//            }
-//            return sendOkTX();
-//        } catch (JSONException | IOException e) {
-//            logger.error("Error updatePoolProcess: "+e.getMessage());                                                                                                                                                                                                                                                                                                             return sendError(10, e.getMessage());
-//        }
-//    
-//    }
-     
     public String sendStatusService()  {
-        //
-        ObjectMapper mapper = new ObjectMapper();
-        
         try {
             
             gDatos.getServiceStatus().setSrvUpdateTime(getDateNow());
@@ -289,11 +169,8 @@ public class srvRutinas {
             gDatos.getServiceStatus().setMapAssignedTypeProc(gDatos.getMapAssignedTypeProc());
             gDatos.getServiceStatus().setMapTask(gDatos.getMapTask());
             
-            for (Map.Entry<String, TaskProcess> entry : gDatos.getServiceStatus().getMapTask().entrySet()) {
-            	logger.info("Enviando Task: "+entry.getKey()+ " status: "+entry.getValue().getStatus()+ " update: "+entry.getValue().getUpdateTime());
-            }
-            
-            JSONObject jo = new JSONObject(mapper.writeValueAsString(gDatos.getServiceStatus()));
+            String serviceStatusString = serializeObjectToJSon(gDatos.getServiceStatus(), false).toString();
+            JSONObject jo = new JSONObject(serviceStatusString);
             
             jData.put("serviceStatus", jo);
             
@@ -311,20 +188,14 @@ public class srvRutinas {
     public synchronized void updateStatusService(JSONObject jData) {
     	try {
 	    	ServiceStatus serviceStatus = new ServiceStatus();
-	    	//Map<String, Interval> vMapInterval = new TreeMap<>();
-	    	
-	    	try {
-	    		logger.info("Serializando objeto serviceStatus");
-				serviceStatus = (ServiceStatus) serializeJSonStringToObject(jData.getString("serviceStatus"), ServiceStatus.class);
-			} catch (IOException e) {
-				logger.error("Error Serializando objeto serviceStatus");
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			serviceStatus = (ServiceStatus) serializeJSonStringToObject(jData.getString("serviceStatus"), ServiceStatus.class);
+			
+			logger.info("Actualizando statusService desde srvMonitor...");
 	    	
 	    	/**
 	    	 * Actualiza el Map AssignedTypeProc
 	    	 */
+			
 	    	logger.info("Actualiza Map AssignedTypeProc");
 	    	gDatos.setMapAssignedTypeProc(serviceStatus.getMapAssignedTypeProc());
 	    	
@@ -375,6 +246,7 @@ public class srvRutinas {
 	        					}
 	        					updateEtl.setMapInterval(updateMapInterval);
 	        					updateTask.setParams(updateEtl);
+	        					logger.info("Se actualizaron los intervalos del Task: "+key);
 	        					break;
 	    					default:
 	    						break;
@@ -386,17 +258,8 @@ public class srvRutinas {
 	        		 * No existe, hay que agregarla
 	        		 */
 	        		gDatos.getMapTask().put(key, newTask);
+	        		logger.info("Se ingreso nuevo Task: "+key);
 	        	}
-	        	
-	        	
-	        	
-	            //try {
-					logger.info("Actualizada Task: " + entry.getKey()); // + ", valor=" + serializeObjectToJSon(gDatos.getMapTask().get(key), false));
-				//} catch (IOException e) {
-					// TODO Auto-generated catch block
-					//logger.error("Error desplegando desserializacion objeto taskProcess");
-					//e.printStackTrace();
-				//}
 	        }
 
         	/**
@@ -428,59 +291,6 @@ public class srvRutinas {
     	} catch (Exception e) {
     		logger.error("Error en updateStatusService...: "+e.getMessage());
     	}
-    	
-    }
-    
-    public synchronized void updateAssignedProcess(JSONObject jData) {
-        try {
-            AssignedTypeProc assignedTypeProc = new AssignedTypeProc();
-            List<AssignedTypeProc> lstAssignedTypeProc = new ArrayList<>();
-            
-            JSONArray jArray = jData.getJSONArray("assignedTypeProc");
-            int numItems = jArray.length();
-            
-            logger.info("Se han recibido: "+numItems+" asignaciones de Tipos de Procesos.");
-            
-            if (numItems>0) {
-
-                for (int i=0; i<numItems; i++) {
-                    assignedTypeProc = (AssignedTypeProc) serializeJSonStringToObject(jArray.get(i).toString(), AssignedTypeProc.class);
-                    lstAssignedTypeProc.add(assignedTypeProc);
-                }
-
-                /**
-                 * Actualiza la lista sobre el objeto serviceStatus
-                 */
-                gDatos.getServiceStatus().setLstAssignedTypeProc(lstAssignedTypeProc);
-                gDatos.getServiceStatus().setIsAssignedTypeProc(true);
-            } else {
-                gDatos.getServiceStatus().setIsAssignedTypeProc(false);
-            }
-        } catch (JSONException | IOException e) {
-        	gDatos.getServiceStatus().setIsAssignedTypeProc(false);
-            logger.error("Error actualizando Asignacion de Procesos: " + e.getMessage());
-        }
-    }
-    
-    public String sendPoolProcess() {
-        try {
-
-            return null;
-        } catch (Exception e) {
-            return sendError(1, "error en send pool process: "+e.getMessage());
-        }
-    }
-    
-    public int enqueProcess(JSONObject jData) {
-        try {
-            return 0;
-        } catch (Exception e) {
-            return 1;
-        }
-    }
-    
-    public void DELupdateActiveProcess(String inputData) {
-       
     }
     
     public String sendDate() {
@@ -497,6 +307,162 @@ public class srvRutinas {
         } catch (Exception e) {
             return sendError(99, e.getMessage());
         }
+    }
+    
+    public synchronized void updateServiceStatistics() {
+    	try {
+    		
+    	} catch (Exception e) {
+    		logger.error("Error en updateServiceStatistics...: "+e.getMessage());
+    	}
+    }
+
+    public synchronized void updateStatusTask(String keyTask, String status) {
+        try {
+            gDatos.getMapTask().get(keyTask).setStatus(status);
+            gDatos.getMapTask().get(keyTask).setUpdateTime(getDateNow());
+        } catch (Exception e) {
+            logger.error("Error en updateStatusTask...: "+e.getMessage());
+        }
+    }
+    
+    public boolean isConnectedDB(Object object, String procType, dataAccess sConn, dataAccess dConn) {
+    	try {
+    		boolean isConnectDBSource;
+    		boolean isConnectDBDest;
+    		
+    		String sourceDBName=null;
+    		String sourceDBType=null;
+    		String sourceIP=null;
+    		String sourceDBPort=null;
+    		String sourceUserName=null;
+    		String sourceUserPass=null;
+    		String sourceDBInstance=null;
+
+    		String destDBName=null;
+    		String destDBType=null;
+    		String destIP=null;
+    		String destDBPort=null;
+    		String destUserName=null;
+    		String destUserPass=null;
+    		String destDBInstance=null;
+
+    		switch (procType) {
+	    		case "ETL":
+	    			ETL etl = new ETL();
+	    			etl = (ETL) object;
+	    			sourceDBName = etl.getSDBNAME();
+	    			sourceDBType = etl.getSDBTYPE();
+	    			sourceIP = etl.getSIP();
+	    			sourceDBPort = etl.getSDBPORT();
+	    			sourceUserName = etl.getSUSERNAME();
+	    			sourceUserPass = etl.getSUSERPASS();
+	    			sourceDBInstance = etl.getSDBINSTANCE();
+	    			
+	    			destDBName = etl.getDDBNAME();
+	    			destDBType = etl.getDDBTYPE();
+	    			destIP = etl.getDIP();
+	    			destDBPort = etl.getDDBPORT();
+	    			destUserName = etl.getDUSERNAME();
+	    			destUserPass = etl.getDUSERPASS();
+	    			destDBInstance = etl.getDDBINSTANCE();
+	    			break;
+	    		case "MOV":
+	    			MOV mov = new MOV();
+	    			mov = (MOV) object;
+	    			sourceDBName = mov.getSDBNAME();
+	    			sourceDBType = mov.getSDBTYPE();
+	    			sourceIP = mov.getSIP();
+	    			sourceDBPort = mov.getSDBPORT();
+	    			sourceUserName = mov.getSUSERNAME();
+	    			sourceUserPass = mov.getSUSERPASS();
+	    			sourceDBInstance = mov.getSDBINSTANCE();
+	    			
+	    			destDBName = mov.getDDBNAME();
+	    			destDBType = mov.getDDBTYPE();
+	    			destIP = mov.getDIP();
+	    			destDBPort = mov.getDDBPORT();
+	    			destUserName = mov.getDUSERNAME();
+	    			destUserPass = mov.getDUSERPASS();
+	    			destDBInstance = mov.getDDBINSTANCE();
+	    			break;
+				default:
+					break;
+    		}
+    		
+    		
+        	/**
+        	 * Establece conexion hacia BD Origen
+        	 */
+        	logger.info("Establece conexión a Base Origen: " + sourceDBName);
+        	logger.info("instance: "+sourceDBInstance);
+        	logger.info("dbType: " + sourceDBType);
+        	logger.info("IP: " + sourceIP);
+        	logger.info("Port: " + sourceDBPort);
+        	logger.info("UserName: " + sourceUserName);
+        	logger.debug("Pass: " + sourceUserPass);
+        	
+            sConn.setDbType(sourceDBType);
+            sConn.setDbHost(sourceIP);
+            sConn.setDbPort(sourceDBPort);
+            sConn.setDbName(sourceDBName);
+            sConn.setDbUser(sourceUserName);
+            sConn.setDbPass(sourceUserPass);
+            if (sourceDBType.equals("SQL")&&!sourceDBInstance.equals("default")) {
+            	sConn.setDbName(sourceIP+"\\"+sourceDBInstance);
+            }
+            
+            sConn.conectar();
+            
+            if (sConn.isConnected()) {
+                logger.info("Base origen connected!");
+                isConnectDBSource= true;
+            } else {
+            	logger.info("Base origen NO connected!");
+                isConnectDBSource = false;
+            }
+
+            /**
+             * Establece conexion hacia BD Destino
+             */
+            logger.info("Establece conexión a Base Destino: " + destDBName);
+            logger.info("instance: "+destDBInstance);
+        	logger.info("dbType: " + destDBType);
+        	logger.info("IP: " + destIP);
+        	logger.info("Port: " + destDBPort);
+        	logger.info("UserName: " + destUserName);
+        	logger.debug("Pass: " + destUserPass);
+            
+            dConn.setDbType(destDBType);
+            dConn.setDbHost(destIP);
+            dConn.setDbPort(destDBPort);
+            dConn.setDbName(destDBName);
+            dConn.setDbUser(destUserName);
+            dConn.setDbPass(destUserPass);
+            if (destDBInstance.equals("SQL")&&!sourceDBInstance.equals("default")) {
+            	dConn.setDbHost(destIP+"\\"+destDBInstance);
+            }
+           
+            dConn.conectar();
+            
+            if (dConn.isConnected()) {
+                logger.info("Base Destino connected!");
+                isConnectDBDest= true;
+            } else {
+            	logger.info("Base Destino NO connected!");
+            	isConnectDBDest = false;
+            }
+
+    		if (isConnectDBSource&&isConnectDBDest) {
+    			return true;
+    		} else {
+    			return false;
+    		}
+    		
+    	} catch (Exception e) {
+    		logger.error("Error modulo isConnectedDB...: "+e.getMessage());
+    		return false;
+    	}
     }
     
     public String serializeObjectToJSon (Object object, boolean formated) throws IOException {

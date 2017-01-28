@@ -43,8 +43,8 @@ public class srvServer {
             gDatos = new globalAreaData();
             gSub = new srvRutinas(gDatos);
 
-            if (gDatos.getServiceStatus().isIsLoadParam()) {
-                if (gDatos.getServiceStatus().isIsLoadRutinas()) {
+            if (gDatos.getServiceStatus().isLoadParam()) {
+                if (gDatos.getServiceStatus().isLoadRutinas()) {
                     Timer mainTimer = new Timer("thMain");
                     mainTimer.schedule(new mainTimerTask(), 2000, gDatos.getServiceInfo().getTxpMain());
                     logger.info("Agendando mainTimerTask cada "+gDatos.getServiceInfo().getTxpMain()+ " segundos...");

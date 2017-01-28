@@ -43,7 +43,7 @@ public class thKeepAliveServices extends Thread {
     @Override
     public void run() {
         Timer timerMain = new Timer("thSubKeep");
-        timerMain.schedule(new mainKeepTask(), 1000, gDatos.getServerInfo().getTxpKeep());
+        timerMain.schedule(new mainKeepTask(), 10000, gDatos.getServerInfo().getTxpKeep());
         logger.info("Se ha agendado thKeepAlive cada 10 segundos");
     }
     

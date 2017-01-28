@@ -32,6 +32,7 @@ public class dataAccess {
     private String dbName;
     private String dbUser;
     private String dbPass;
+    private String dbInstance;
     
     public dataAccess (globalAreaData m) {
         gDatos = m;
@@ -56,7 +57,7 @@ public class dataAccess {
                 break;
             case "MYSQL":
                 try {
-                    myConn = new mysqlDB(dbHost, dbName, String.valueOf(dbPort), dbUser, dbPass);
+            		myConn = new mysqlDB(dbHost, dbName, String.valueOf(dbPort), dbUser, dbPass);
                     myConn.conectar();
                     if (myConn.getConnStatus()) {
                         //gDatos.getServerStatus().setIsValMetadataConnect(true);
@@ -274,4 +275,13 @@ public class dataAccess {
     public void setDbPort(String dbPort) {
         this.dbPort = dbPort;
     }
+
+	public String getDbInstance() {
+		return dbInstance;
+	}
+
+	public void setDbInstance(String dbInstance) {
+		this.dbInstance = dbInstance;
+	}
+    
 }

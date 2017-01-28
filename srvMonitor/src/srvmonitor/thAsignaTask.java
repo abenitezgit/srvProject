@@ -16,7 +16,6 @@ import java.util.TreeMap;
 import org.apache.log4j.Logger;
 
 import dataClass.Dependence;
-import dataClass.Grupo;
 import dataClass.TaskProcess;
 import utilities.globalAreaData;
 import utilities.srvRutinas;
@@ -39,7 +38,7 @@ public class thAsignaTask extends Thread{
     @Override
     public void run() {
         Timer timerMain = new Timer("thSubAsignaTask");
-        timerMain.schedule(new mainTask(), 10000, gDatos.getServerInfo().getTxpAsigna());
+        timerMain.schedule(new mainTask(), 30000, gDatos.getServerInfo().getTxpAsigna());
         
     }
     
@@ -70,8 +69,8 @@ public class thAsignaTask extends Thread{
 	            /*
 	             * Valida Servicios Registrados para realizar asignacion de procesos
 	             */
-	            if (true) {
-	            //if (gDatos.getMapServiceStatus().size()>0) {
+	            //if (true) {
+	            if (gDatos.getMapServiceStatus().size()>0) {
 	            	
 	            	logger.info("Se encontraron "+gDatos.getMapServiceStatus().size()+ " servicios registrados");
 	            	
@@ -92,10 +91,14 @@ public class thAsignaTask extends Thread{
         					 logger.info("Analizando Task: "+entry.getKey()+ " status: "+entry.getValue().getStatus());
 		        			 switch (entry.getValue().getStatus()) {
 		            			 case "Pending":
-		            				 if (isFinishedDependences(entry.getValue())) {
-		            					 gDatos.updateStatusMapTask(entry.getKey(), "Ready");
-		            					 updateStatusReadyGrupoExec(entry.getValue());
-		            					 logger.info("Se Asigno Task: "+entry.getKey());
+		            				 if (!isPrevInscritoGrupoProc(entry.getValue())) {
+			            				 if (isFinishedDependences(entry.getValue())) {
+			            					 gDatos.updateStatusMapTask(entry.getKey(), "Ready");
+			            					 updateStatusReadyGrupoExec(entry.getValue());
+			            					 logger.info("Se Asigno Task: "+entry.getKey());
+			            				 }
+		            				 } else {
+		            					 updateTaskAbort(entry.getKey());
 		            				 }
 		            				 break;
 		        				 default:
@@ -116,6 +119,32 @@ public class thAsignaTask extends Thread{
 	    		logger.error("Error en Proceso Asigna Tareas...: "+e.getMessage());
 	    	}
         } //fin run()
+        
+        private void updateTaskAbort(String keyTask) {
+        	if (gDatos.getMapTask().containsKey(keyTask)) {
+        		gDatos.getMapTask().get(keyTask).setEndTime(mylib.getDateNow());
+        		gDatos.getMapTask().get(keyTask).setStatus("Finished");
+        		gDatos.getMapTask().get(keyTask).setuStatus("Abort");
+        	}
+        }
+        
+        private boolean isPrevInscritoGrupoProc (TaskProcess task) {
+        	try {
+        		long numOtherTask = 
+        				gDatos.getMapTask().entrySet().stream().filter
+        				(map -> 
+        					map.getValue().getGrpID().equals(task.getGrpID())&&
+        					map.getValue().getProcID().equals(task.getProcID())&&
+        					!map.getValue().getStatus().equals("Pending")
+    					).count();
+        		
+        		return numOtherTask>0;
+        	} catch (Exception e) {
+        		logger.error("Error en isPrevInscritoGrupoProc: "+e.getMessage());
+        		return false;
+        	}
+        	
+        }
         
 	    private boolean isFinishedDependences(TaskProcess task) {
 	    	try {

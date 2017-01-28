@@ -26,6 +26,7 @@ public class sqlDB {
     String v_dbPort;
     String v_dbUser;
     String v_dbPass;
+    String v_Instance;
     static boolean connStatus;
     static String connErrMesg;
     static int vLoginTimeout=2;
@@ -38,6 +39,7 @@ public class sqlDB {
     Dentro del método encerraremos la mayor parte del código dentro de un try-catch 
     con el fin de capturar las excepciones que se puedan originar tras la ejecución del mismo
     */
+
     public sqlDB(String vHost, String dbName, String dbPort, String dbUser, String dbPass) {
     	this.v_hostIP = vHost;
     	this.v_dbName = dbName;
@@ -130,9 +132,6 @@ public class sqlDB {
         
          String BaseDeDatos = "jdbc:sqlserver://"+v_hostIP+";databaseName="+v_dbName+";user="+v_dbUser+";password="+v_dbPass;
 
-        
-        
-        
         try {
             
             DriverManager.setLoginTimeout(vLoginTimeout);
@@ -183,7 +182,7 @@ public class sqlDB {
     public boolean executeSP(String sql) {
        try {
             Statement sentencia;
-            sentencia = getConexion().createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+            sentencia = getConexion().createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_UPDATABLE);
             if (sentencia.execute(sql)) {
                 return true;
             }

@@ -175,7 +175,6 @@ public class srvRutinas {
             Date today;
             SimpleDateFormat formatter;
             formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            System.out.println(formatter.getTimeZone());
             today = new Date();
             return formatter.format(today);  
         } catch (Exception e) {
@@ -190,7 +189,6 @@ public class srvRutinas {
             Date today;
             SimpleDateFormat formatter;
             formatter = new SimpleDateFormat(xformat);
-            System.out.println(formatter.getTimeZone());
             today = new Date();
             return formatter.format(today);  
         } catch (Exception e) {

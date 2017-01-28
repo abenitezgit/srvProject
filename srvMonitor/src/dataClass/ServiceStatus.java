@@ -7,6 +7,7 @@ package dataClass;
 
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -29,241 +30,166 @@ public class ServiceStatus {
     boolean isSubRunProcActive;
     boolean isLoadParam;
     boolean isLoadRutinas;
-    int numProcRunning;
-    int numProcSleeping;
-    int numProcFinished;
-    int numTotalExec;
     int numProcMax;
     int srvEnable;
-    int numThreadActives;
+    int numProcActive;
     int srvPort;
-    int maxTimeOffile;
-    Socket skCliente;
+    int maxTimeOffLine;
+    int numProcRunning;
+    int numProcReady;
+    int numProcFinished;
     
-    //Información Propia
-    List<AssignedTypeProc> lstAssignedTypeProc = new ArrayList<>();
-    List<ActiveTypeProc> lstActiveTypeProc = new ArrayList<>();
+    //Información de Procesos
     Map<String,TaskProcess> mapTask = new TreeMap<>();
     Map<String, AssignedTypeProc> mapAssignedTypeProc = new TreeMap<>();
-    //Map<String, Interval> mapInterval = new TreeMap<>();
-    
+    Map<String, ActiveTypeProc> mapActiveTypeProc = new HashMap<>();
     
     //Getter and Setter
     //
-
-    public boolean isIsLoadParam() {
-        return isLoadParam;
-    }
-
-//    public Map<String, Interval> getMapInterval() {
-//		return mapInterval;
-//	}
-//
-//	public void setMapInterval(Map<String, Interval> mapInterval) {
-//		this.mapInterval = mapInterval;
-//	}
-//
+    
+	public String getSrvID() {
+		return srvID;
+	}
+	public int getNumProcRunning() {
+		return numProcRunning;
+	}
+	public void setNumProcRunning(int numProcRunning) {
+		this.numProcRunning = numProcRunning;
+	}
+	public int getNumProcReady() {
+		return numProcReady;
+	}
+	public void setNumProcReady(int numProcReady) {
+		this.numProcReady = numProcReady;
+	}
+	public int getNumProcFinished() {
+		return numProcFinished;
+	}
+	public void setNumProcFinished(int numProcFinished) {
+		this.numProcFinished = numProcFinished;
+	}
+	public void setSrvID(String srvID) {
+		this.srvID = srvID;
+	}
+	public String getSrvHost() {
+		return srvHost;
+	}
+	public void setSrvHost(String srvHost) {
+		this.srvHost = srvHost;
+	}
+	public String getSrvStartTime() {
+		return srvStartTime;
+	}
+	public void setSrvStartTime(String srvStartTime) {
+		this.srvStartTime = srvStartTime;
+	}
+	public String getSrvUpdateTime() {
+		return srvUpdateTime;
+	}
+	public void setSrvUpdateTime(String srvUpdateTime) {
+		this.srvUpdateTime = srvUpdateTime;
+	}
+	public boolean isSrvActive() {
+		return srvActive;
+	}
+	public void setSrvActive(boolean srvActive) {
+		this.srvActive = srvActive;
+	}
+	public boolean isActivePrimaryMonHost() {
+		return isActivePrimaryMonHost;
+	}
+	public void setActivePrimaryMonHost(boolean isActivePrimaryMonHost) {
+		this.isActivePrimaryMonHost = isActivePrimaryMonHost;
+	}
+	public boolean isSocketServerActive() {
+		return isSocketServerActive;
+	}
+	public void setSocketServerActive(boolean isSocketServerActive) {
+		this.isSocketServerActive = isSocketServerActive;
+	}
+	public boolean isConnectMonHost() {
+		return isConnectMonHost;
+	}
+	public void setConnectMonHost(boolean isConnectMonHost) {
+		this.isConnectMonHost = isConnectMonHost;
+	}
+	public boolean isAssignedTypeProc() {
+		return isAssignedTypeProc;
+	}
+	public void setAssignedTypeProc(boolean isAssignedTypeProc) {
+		this.isAssignedTypeProc = isAssignedTypeProc;
+	}
+	public boolean isKeepAliveActive() {
+		return isKeepAliveActive;
+	}
+	public void setKeepAliveActive(boolean isKeepAliveActive) {
+		this.isKeepAliveActive = isKeepAliveActive;
+	}
+	public boolean isSubRunProcActive() {
+		return isSubRunProcActive;
+	}
+	public void setSubRunProcActive(boolean isSubRunProcActive) {
+		this.isSubRunProcActive = isSubRunProcActive;
+	}
+	public boolean isLoadParam() {
+		return isLoadParam;
+	}
+	public void setLoadParam(boolean isLoadParam) {
+		this.isLoadParam = isLoadParam;
+	}
+	public boolean isLoadRutinas() {
+		return isLoadRutinas;
+	}
+	public void setLoadRutinas(boolean isLoadRutinas) {
+		this.isLoadRutinas = isLoadRutinas;
+	}
+	public int getNumProcMax() {
+		return numProcMax;
+	}
+	public void setNumProcMax(int numProcMax) {
+		this.numProcMax = numProcMax;
+	}
+	public int getSrvEnable() {
+		return srvEnable;
+	}
+	public void setSrvEnable(int srvEnable) {
+		this.srvEnable = srvEnable;
+	}
+	public int getNumProcActive() {
+		return numProcActive;
+	}
+	public void setNumProcActive(int numProcActive) {
+		this.numProcActive = numProcActive;
+	}
+	public int getSrvPort() {
+		return srvPort;
+	}
+	public void setSrvPort(int srvPort) {
+		this.srvPort = srvPort;
+	}
+	public int getMaxTimeOffLine() {
+		return maxTimeOffLine;
+	}
+	public void setMaxTimeOffLine(int maxTimeOffLine) {
+		this.maxTimeOffLine = maxTimeOffLine;
+	}
 	public Map<String, TaskProcess> getMapTask() {
 		return mapTask;
 	}
-
 	public void setMapTask(Map<String, TaskProcess> mapTask) {
 		this.mapTask = mapTask;
 	}
-
 	public Map<String, AssignedTypeProc> getMapAssignedTypeProc() {
 		return mapAssignedTypeProc;
 	}
-
 	public void setMapAssignedTypeProc(Map<String, AssignedTypeProc> mapAssignedTypeProc) {
 		this.mapAssignedTypeProc = mapAssignedTypeProc;
 	}
-
-	public void setIsLoadParam(boolean isLoadParam) {
-        this.isLoadParam = isLoadParam;
-    }
-
-    public boolean isIsLoadRutinas() {
-        return isLoadRutinas;
-    }
-
-    public void setIsLoadRutinas(boolean isLoadRutinas) {
-        this.isLoadRutinas = isLoadRutinas;
-    }
+	public Map<String, ActiveTypeProc> getMapActiveTypeProc() {
+		return mapActiveTypeProc;
+	}
+	public void setMapActiveTypeProc(Map<String, ActiveTypeProc> mapActiveTypeProc) {
+		this.mapActiveTypeProc = mapActiveTypeProc;
+	} 
     
-    public String getSrvStartTime() {
-        return srvStartTime;
-    }
-
-    public void setSrvStartTime(String srvStartTime) {
-        this.srvStartTime = srvStartTime;
-    }
-
-    public String getSrvUpdateTime() {
-        return srvUpdateTime;
-    }
-
-    public void setSrvUpdateTime(String srvUpdateTime) {
-        this.srvUpdateTime = srvUpdateTime;
-    }
-
-    public String getSrvHost() {
-        return srvHost;
-    }
-
-    public void setSrvHost(String srvHost) {
-        this.srvHost = srvHost;
-    }
-
-    public int getSrvPort() {
-        return srvPort;
-    }
-
-    public void setSrvPort(int srvPort) {
-        this.srvPort = srvPort;
-    }
-
-    public boolean isIsAssignedTypeProc() {
-        return isAssignedTypeProc;
-    }
-
-    public void setIsAssignedTypeProc(boolean isAssignedTypeProc) {
-        this.isAssignedTypeProc = isAssignedTypeProc;
-    }
-
-    public int getNumThreadActives() {
-        return numThreadActives;
-    }
-
-    public void setNumThreadActives(int numThreadActives) {
-        this.numThreadActives = numThreadActives;
-    }
-    
-    public boolean isIsSubRunProcActive() {
-        return isSubRunProcActive;
-    }
-
-    public void setIsSubRunProcActive(boolean isSubRunProcActive) {
-        this.isSubRunProcActive = isSubRunProcActive;
-    }
-    
-    public int getNumProcRunning() {
-        return numProcRunning;
-    }
-
-    public void setNumProcRunning(int numProcRunning) {
-        this.numProcRunning = numProcRunning;
-    }
-
-    public int getNumProcSleeping() {
-        return numProcSleeping;
-    }
-
-    public void setNumProcSleeping(int numProcSleeping) {
-        this.numProcSleeping = numProcSleeping;
-    }
-
-    public int getNumProcFinished() {
-        return numProcFinished;
-    }
-
-    public void setNumProcFinished(int numProcFinished) {
-        this.numProcFinished = numProcFinished;
-    }
-    
-    public List<AssignedTypeProc> getLstAssignedTypeProc() {
-        return lstAssignedTypeProc;
-    }
-
-    public void setLstAssignedTypeProc(List<AssignedTypeProc> lstAssignedTypeProc) {
-        this.lstAssignedTypeProc = lstAssignedTypeProc;
-    }
-
-    public List<ActiveTypeProc> getLstActiveTypeProc() {
-        return lstActiveTypeProc;
-    }
-
-    public void setLstActiveTypeProc(List<ActiveTypeProc> lstActiveTypeProc) {
-        this.lstActiveTypeProc = lstActiveTypeProc;
-    }
-    
-    public Socket getSkCliente() {
-        return skCliente;
-    }
-
-    public void setSkCliente(Socket skCliente) {
-        this.skCliente = skCliente;
-    }
-
-    public boolean isIsKeepAliveActive() {
-        return isKeepAliveActive;
-    }
-
-    public void setIsKeepAliveActive(boolean isKeepAliveActive) {
-        this.isKeepAliveActive = isKeepAliveActive;
-    }
-    
-    public boolean isIsActivePrimaryMonHost() {
-        return isActivePrimaryMonHost;
-    }
-
-    public void setIsActivePrimaryMonHost(boolean isActivePrimaryMonHost) {
-        this.isActivePrimaryMonHost = isActivePrimaryMonHost;
-    }
-
-    public boolean isIsSocketServerActive() {
-        return isSocketServerActive;
-    }
-
-    public void setIsSocketServerActive(boolean isSocketServerActive) {
-        this.isSocketServerActive = isSocketServerActive;
-    }
-
-    public boolean isIsConnectMonHost() {
-        return isConnectMonHost;
-    }
-
-    public void setIsConnectMonHost(boolean isConnectMonHost) {
-        this.isConnectMonHost = isConnectMonHost;
-    }
-
-    public int getNumTotalExec() {
-        return numTotalExec;
-    }
-
-    public void setNumTotalExec(int numTotalExec) {
-        this.numTotalExec = numTotalExec;
-    }
-
-    public boolean isSrvActive() {
-        return srvActive;
-    }
-
-    public void setSrvActive(boolean srvActive) {
-        this.srvActive = srvActive;
-    }
-
-    public int getSrvEnable() {
-        return srvEnable;
-    }
-
-    public void setSrvEnable(int srvEnable) {
-        this.srvEnable = srvEnable;
-    }
-
-    public String getSrvID() {
-        return srvID;
-    }
-
-    public void setSrvID(String srvID) {
-        this.srvID = srvID;
-    }
-
-    public int getNumProcMax() {
-        return numProcMax;
-    }
-
-    public void setNumProcMax(int numProcMax) {
-        this.numProcMax = numProcMax;
-    }
 }

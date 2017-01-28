@@ -30,6 +30,7 @@ import utilities.srvRutinas;
  */
 public class thExecETL extends Thread{
     TaskProcess taskProcess = new TaskProcess();
+    String keyTask;
     static srvRutinas gSub;
     static globalAreaData gDatos;
     String vSQLSource;
@@ -50,6 +51,7 @@ public class thExecETL extends Thread{
     
     public thExecETL(globalAreaData m, TaskProcess taskProcess) {
         this.taskProcess = taskProcess;
+        keyTask = taskProcess.getProcID()+":"+taskProcess.getNumSecExec();
         gDatos = m;
         gSub = new srvRutinas(gDatos);
     }
@@ -62,10 +64,9 @@ public class thExecETL extends Thread{
     	try {
     		boolean statusExit=true;
     		
-    		logger.info("Iniciando ejecución ETL:"+taskProcess.getProcID()+" "+taskProcess.getNumSecExec());
+    		logger.info("Iniciando ejecución ETL:" + keyTask);
     		
-    		gDatos.getMapTask().get(taskProcess.getProcID()+":"+taskProcess.getNumSecExec()).setStatus("Running");
-    		gDatos.getMapTask().get(taskProcess.getProcID()+":"+taskProcess.getNumSecExec()).setUpdateTime(gSub.getDateNow());
+    		gSub.updateStatusTask(keyTask, "Running");
     		
     		if (isValidDataParam()) {
     			
@@ -143,6 +144,7 @@ public class thExecETL extends Thread{
     	        					}
     	        				}
     	        				rsExtract.close();
+    	        				updateIntervalStatusRows(taskProcess, etl, interval, rowsRead, rowsLoad);
     	        			}
     	        			
     	        			//Termino de Ejecucion de cada intervalo cargado

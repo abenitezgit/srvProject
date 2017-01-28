@@ -12,6 +12,8 @@ import dataClass.EtlMatch;
 import dataClass.Ftp;
 import dataClass.Grupo;
 import dataClass.Interval;
+import dataClass.MOV;
+import dataClass.MovMatch;
 import dataClass.Process;
 import dataClass.TaskProcess;
 
@@ -527,6 +529,10 @@ public class thInscribeTask extends Thread{
                     	logger.info("Buscando programacion de FTP "+ process.getProcID() + " en MetaData.");
                     	param = findFtpDetail(process);
                     	break;
+                    case "MOV":
+                    	logger.info("Buscando programacion de MOV "+ process.getProcID() + " en MetaData.");
+                    	param = findMovDetail(process);
+                    	break;
                     default:
                     	logger.error("No existe definicion para tipo de proceso");
                     	param = null;
@@ -537,6 +543,45 @@ public class thInscribeTask extends Thread{
             	return null;
             }
 	    }
+	    
+	    private MOV findMovDetail(Process process) {
+	    	try {
+            	MOV mov = new MOV();
+                
+                //Recupera parametros globales del MOV
+            	logger.info("Recuperando parmatros globales del MOV "+process.getProcID());
+                vSQL = metadata.getSqlFindMOV(process.getProcID());
+                
+                ResultSet rsProc = (ResultSet) metadata.getQuery(vSQL);
+                if (rsProc!=null) {
+                	mov = getParseMovParam(rsProc);
+                } else {
+                	logger.info("No se encontró detalle de proceso para MOV: "+process.getProcID());
+                }
+
+                //Asocia numSecExec
+                mov.setNUMSECEXEC(process.getNumSecExec());
+                
+                //Recupera Match de Campos del MOV
+                //Recupera detalle de Match de Campos para este MOV
+                logger.info("Recuperando Match de campos del MOV "+process.getProcID());
+                vSQL = metadata.getSqlFindMOVMatch(process.getProcID());
+                
+                ResultSet rsMatch = (ResultSet) metadata.getQuery(vSQL);
+                if (rsMatch!=null) {
+                	mov.setLstMovMatch(getParseMOVMatch(rsMatch));
+                }
+
+                logger.info("Se recuperaron "+mov.getLstMovMatch().size()+ " campos del Match MOV "+process.getProcID());
+                
+	    	return mov;
+	    		
+	    	} catch (Exception e) {
+	    		logger.error("Error en findMovDetail: "+e.getMessage());
+	    		return null;
+	    	}
+	    } //end MOV findMovDetail()
+
 	    
 	    private ETL findETLDetail(Process process) {
 	    	try {
@@ -894,7 +939,41 @@ public class thInscribeTask extends Thread{
 	    	
 	    	return lstEtlMatch;
 	    }
-	    
+
+	    private List<MovMatch> getParseMOVMatch(ResultSet rs) throws Exception{
+	    	MovMatch movMatch;
+	    	List<MovMatch> lstMovMatch = new ArrayList<>();
+	    	
+            while (rs.next()) {
+            	movMatch = new MovMatch();
+                
+                if (rs.getString("MOVORDER")!=null) {
+                	movMatch.setMovOrder(rs.getInt("MOVORDER"));
+                }
+                if (rs.getString("SOURCEFIELD")!=null) {
+                	movMatch.setSourceField(rs.getString("SOURCEFIELD"));
+                }
+                if (rs.getString("SOURCELENGTH")!=null) {
+                    movMatch.setSourceLength(rs.getInt("SOURCELENGTH"));
+                }
+                if (rs.getString("SOURCETYPE")!=null) {
+                    movMatch.setSourceType(rs.getString("SOURCETYPE"));
+                }
+                if (rs.getString("DESTFIELD")!=null) {
+                    movMatch.setDestField(rs.getString("DESTFIELD"));
+                }
+                if (rs.getString("DESTLENGTH")!=null) {
+                    movMatch.setDestLength(rs.getInt("DESTLENGTH"));
+                }
+                if (rs.getString("DESTTYPE")!=null) {
+                    movMatch.setDestType(rs.getString("DESTTYPE"));
+                }
+                lstMovMatch.add(movMatch);
+            }
+	    	
+	    	return lstMovMatch;
+	    }
+
 	    private Ftp getParseFtpParam(ResultSet rs) throws Exception {
 	    	Ftp ftp = new Ftp();
 	    	if (rs.next()) {
@@ -1074,5 +1153,105 @@ public class thInscribeTask extends Thread{
     		}
     		return etl;
     	}
+    	
+    	private MOV getParseMovParam(ResultSet rs) throws Exception {
+    		MOV mov = new MOV();
+    		if (rs.next()) {
+                if (rs.getString("MOVID")!=null) {
+                    mov.setMovID(rs.getString("MOVID")); 
+                }
+                if (rs.getString("MOVDESC")!=null) {
+                    mov.setMovDesc(rs.getString("MOVDESC")); 
+                }
+                if (rs.getString("MOVENABLE")!=null) {
+                    mov.setEnable(rs.getInt("MOVENABLE")); 
+                }
+                if (rs.getString("CLIDESC")!=null) {
+                    mov.setCliDesc(rs.getString("CLIDESC")); 
+                }
+                if (rs.getString("WHEREACTIVE")!=null) {
+                    mov.setWHEREACTIVE(rs.getInt("WHEREACTIVE")); 
+                }
+                if (rs.getString("QUERYBODY")!=null) {
+                    mov.setQUERYBODY(rs.getString("QUERYBODY")); 
+                }
+                if (rs.getString("STBNAME")!=null) {
+                    mov.setSTBNAME(rs.getString("STBNAME")); 
+                }
+                if (rs.getString("DTBNAME")!=null) {
+                	mov.setDTBNAME(rs.getString("DTBNAME")); 
+                }
+                if (rs.getString("SIP")!=null) {
+                	mov.setSIP(rs.getString("SIP")); 
+                }
+                if (rs.getString("SDBNAME")!=null) {
+                	mov.setSDBNAME(rs.getString("SDBNAME")); 
+                }
+                if (rs.getString("SDBDESC")!=null) {
+                	mov.setSDBDESC(rs.getString("SDBDESC")); 
+                }
+                if (rs.getString("SDBTYPE")!=null) {
+                	mov.setSDBTYPE(rs.getString("SDBTYPE")); 
+                }
+                if (rs.getString("SDBPORT")!=null) {
+                	mov.setSDBPORT(rs.getString("SDBPORT")); 
+                }
+                if (rs.getString("SDBINSTANCE")!=null) {
+                	mov.setSDBINSTANCE(rs.getString("SDBINSTANCE")); 
+                }
+                if (rs.getString("SDBCONF")!=null) {
+                	mov.setSDBCONF(rs.getString("SDBCONF")); 
+                }
+                if (rs.getString("SDBJDBC")!=null) {
+                	mov.setSDBJDBC(rs.getString("SDBJDBC")); 
+                }
+                if (rs.getString("SUSERNAME")!=null) {
+                	mov.setSUSERNAME(rs.getString("SUSERNAME")); 
+                }
+                if (rs.getString("SUSERPASS")!=null) {
+                	mov.setSUSERPASS(rs.getString("SUSERPASS")); 
+                }
+                if (rs.getString("SUSERTYPE")!=null) {
+                	mov.setSUSERTYPE(rs.getString("SUSERTYPE")); 
+                }
+                if (rs.getString("DIP")!=null) {
+                	mov.setDIP(rs.getString("DIP")); 
+                }
+                if (rs.getString("DDBDESC")!=null) {
+                	mov.setDDBDESC(rs.getString("DDBDESC")); 
+                }
+                if (rs.getString("DDBNAME")!=null) {
+                	mov.setDDBNAME(rs.getString("DDBNAME")); 
+                }
+                if (rs.getString("DDBTYPE")!=null) {
+                	mov.setDDBTYPE(rs.getString("DDBTYPE")); 
+                }
+                if (rs.getString("DDBPORT")!=null) {
+                	mov.setDDBPORT(rs.getString("DDBPORT")); 
+                }
+                if (rs.getString("DDBINSTANCE")!=null) {
+                	mov.setDDBINSTANCE(rs.getString("DDBINSTANCE")); 
+                }
+                if (rs.getString("DDBCONF")!=null) {
+                	mov.setDDBCONF(rs.getString("DDBCONF")); 
+                }
+                if (rs.getString("DDBJDBC")!=null) {
+                	mov.setDDBJDBC(rs.getString("DDBJDBC")); 
+                }
+                if (rs.getString("DUSERNAME")!=null) {
+                	mov.setDUSERNAME(rs.getString("DUSERNAME")); 
+                }
+                if (rs.getString("DUSERPASS")!=null) {
+                	mov.setDUSERPASS(rs.getString("DUSERPASS")); 
+                }
+                if (rs.getString("DUSERTYPE")!=null) {
+                	mov.setDUSERTYPE(rs.getString("DUSERTYPE")); 
+                }
+    		}
+    		return mov;
+    	}
+
+    	
+    	
     } //class
 }

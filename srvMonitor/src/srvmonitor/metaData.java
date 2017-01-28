@@ -347,7 +347,32 @@ public class metaData {
     	}    	
     }
 
-
+    public String getSqlFindMOVMatch(String MOVID) {
+    	String vSQL="";
+    	switch (gDatos.getServerInfo().getDbType()) {
+    	case "ORA":
+            vSQL =  "";
+    		break;
+    	case "SQL":
+    		break;
+    	case "mySQL":
+    		vSQL = 	"select " +
+                    "  MOVORDER, SOURCEFIELD, SOURCELENGTH, SOURCETYPE, " +
+                    "  DESTFIELD, DESTLENGTH, DESTTYPE " +
+                    "from  " +
+                    "  tb_MovMatch " +
+                    "where " +
+                    "  MOVID='"+ MOVID  +"' " +
+                    "  And ENABLE=1 order by MOVORDER";
+    		break;
+		default:
+			vSQL="";
+			break;
+    	}
+    	
+    	return vSQL;
+    }
+    
     public String getSqlFindETLMatch(String ETLID) {
     	String vSQL="";
     	switch (gDatos.getServerInfo().getDbType()) {
@@ -385,6 +410,53 @@ public class metaData {
 			default:
 				return null;
     	}
+    }
+
+    public String getSqlFindMOV(String procID) {
+    	String vSQL="";
+    	switch (gDatos.getServerInfo().getDbType()) {
+    	case "ORA":
+            vSQL =  "";
+    		break;
+    	case "SQL":
+    		break;
+    	case "mySQL":
+    		vSQL = 	"select  cfg.MOVID as MOVID, cfg.MOVDESC as MOVDESC, cfg.MOVENABLE as MOVENABLE, cli.CLIDESC as CLIDESC, " +
+                    "        cfg.QUERYWHEREACTIVE as WHEREACTIVE, cfg.QUERYBODY as QUERYBODY, " +
+                    "        cfg.SOURCETBNAME as STBNAME,  cfg.DESTTBNAME as DTBNAME, " +
+                    "        srv.SERVERIP as SIP,  " +
+                    "        db.DBDESC as SDBDESC, db.DBNAME as SDBNAME, db.DBTYPE as SDBTYPE, db.DBPORT as SDBPORT, db.DBINSTANCE as SDBINSTANCE, db.DBFILECONF as SDBCONF, db.DBJDBCSTRING as SDBJDBC, " +
+                    "        usr.USERNAME as SUSERNAME, usr.USERPASS as SUSERPASS, usr.USERTYPE as SUSERTYPE, " +
+                    "        srvD.SERVERIP as DIP, " +
+                    "        dbD.DBDESC as DDBDESC, dbD.DBNAME as DDBNAME, dbD.DBTYPE as DDBTYPE, dbD.DBPORT as DDBPORT, dbD.DBINSTANCE as DDBINSTANCE, dbD.DBFILECONF as DDBCONF, dbD.DBJDBCSTRING as DDBJDBC, " +
+                    "        usrD.USERNAME as DUSERNAME, usrD.USERPASS as DUSERPASS, usrD.USERTYPE as DUSERTYPE " +
+                    "from " +
+                    "  tb_movtb cfg, " +
+                    "  tb_server srv, " +
+                    "  tb_dbase db, " +
+                    "  tb_client cli, " +
+                    "  TB_USER usr, " +
+                    "  TB_server srvD, " +
+                    "  TB_dbase dbD, " +
+                    "  TB_USER usrD " +
+                    "where " +
+                    "  cfg.CLIID = cli.CLIID " +
+                    "  And cfg.SourceServerID = srv.SERVERID " +
+                    "  And cfg.SourceDBID = db.DBID " +
+                    "  And cfg.SOURCEUSERID = usr.USERID " +
+                    "  And cfg.DESTSERVERID = srvD.SERVERID " +
+                    "  And cfg.DESTDBID = dbD.DBID " +
+                    "  And cfg.DESTUSERID = usrD.USERID " +
+                    "  And cfg.MOVID='"+ procID +"'  " +
+                    "order by " +
+                    "  MOVID";
+    		break;
+		default:
+			vSQL="";
+			break;
+    	}
+    	
+    	return vSQL;
     }
 
     

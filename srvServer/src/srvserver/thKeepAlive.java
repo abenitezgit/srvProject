@@ -38,9 +38,9 @@ public class thKeepAlive extends Thread {
     @Override
     public void run() {
     	logger.info("Iniciando thKeepAlive");
-    	logger.info("Status Active Monitor Host: "+gDatos.getServiceStatus().isIsActivePrimaryMonHost());
+    	logger.info("Status Active Monitor Host: "+gDatos.getServiceStatus().isActivePrimaryMonHost());
     	
-    	isPrimary = gDatos.getServiceStatus().isIsActivePrimaryMonHost();
+    	isPrimary = gDatos.getServiceStatus().isActivePrimaryMonHost();
     	if (isPrimary) {
     		srvHost = gDatos.getServiceInfo().getSrvMonHost();
     		srvPort = gDatos.getServiceInfo().getMonPort();
@@ -85,7 +85,7 @@ public class thKeepAlive extends Thread {
                         logger.error("Error result: "+jData.getInt("errCode")+ " " +jData.getString("errMesg"));
                     }
                 }
-                gDatos.getServiceStatus().setIsConnectMonHost(true);
+                gDatos.getServiceStatus().setConnectMonHost(true);
             } catch (JSONException e) {
                 logger.error("Error en formato de respuesta");
             }
@@ -96,8 +96,8 @@ public class thKeepAlive extends Thread {
             skCliente.close();
             logger.info("Finalizando thKeepAlive");
         } catch (NumberFormatException | IOException | ClassNotFoundException e) {
-            gDatos.getServiceStatus().setIsActivePrimaryMonHost(!isPrimary);
-            gDatos.getServiceStatus().setIsConnectMonHost(false);
+            gDatos.getServiceStatus().setActivePrimaryMonHost(!isPrimary);
+            gDatos.getServiceStatus().setConnectMonHost(false);
             logger.error(" Error conexion a server de monitoreo "+ srvName + ": "+ e.getMessage());
         }
     }

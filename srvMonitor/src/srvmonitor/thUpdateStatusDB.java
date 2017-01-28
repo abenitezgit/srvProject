@@ -39,7 +39,7 @@ public class thUpdateStatusDB extends Thread {
     @Override
     public void run() {
         Timer timerMain = new Timer("thSubUpdateStatus");
-        timerMain.schedule(new mainKeepTask(), 1000, gDatos.getServerInfo().getTxpUpdateMD());
+        timerMain.schedule(new mainKeepTask(), 30000, gDatos.getServerInfo().getTxpUpdateMD());
         logger.info("Se ha agendado thSubUpdateStatus cada "+gDatos.getServerInfo().getTxpUpdateMD());
     }
     

@@ -1,3 +1,5 @@
-/utilities/
-/srvmonitor/
+/.DS_Store
 /dataClass/
+/log4j.properties
+/srvmonitor/
+/utilities/

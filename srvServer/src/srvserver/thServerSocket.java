@@ -73,26 +73,6 @@ public class thServerSocket extends Thread {
                             case "getDate":
                                 outputData = gSub.sendDate();
                                 break;
-                            case "updateAssignedProc":
-                                gSub.updateAssignedProcess(jData);
-                                outputData = gSub.sendOkTX();
-                                break;
-                            case "executeProcess":
-                                logger.info("Ejecutando ...enqueProcess..: "+ inputData);
-                                int result = gSub.enqueProcess(jData);
-                                if (result==0) {
-                                    outputData = gSub.sendOkTX();
-                                } else {
-                                    if (result==2) {
-                                        outputData = gSub.sendError(99, "Proceso ya se encuntra encolado...");
-                                    } else {
-                                        outputData = gSub.sendError(99, "Error encolando proceso...");
-                                    }
-                                }
-                                break;
-                            case "getPoolProcess":
-                                outputData = gSub.sendPoolProcess();
-                                break;
                             case "getList":
                                 outputData = ""; //gSub.sendList(jData);
                                 break;
@@ -102,9 +82,6 @@ public class thServerSocket extends Thread {
                             case "ping":
                                 outputData = gSub.sendOkTX();
                                 break;
-//                            case "updatePoolProcesss":
-//                                outputData = gSub.updatePoolProcess(jData);
-//                                break;
                             default:
                                 outputData = gSub.sendError(99,"Error desconocido..");
                         }
